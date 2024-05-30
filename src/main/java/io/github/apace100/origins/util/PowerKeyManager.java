@@ -4,7 +4,6 @@ import io.github.apace100.apoli.power.*;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
-import java.util.List;
 
 public class PowerKeyManager {
 
@@ -15,32 +14,21 @@ public class PowerKeyManager {
     }
 
     public static String getKeyIdentifier(Identifier powerId) {
-        if(KEY_CACHE.containsKey(powerId)) {
-            return KEY_CACHE.get(powerId);
-        }
-        String key = getKeyFromPower(powerId);
-        KEY_CACHE.put(powerId, key);
-        return key;
+        return KEY_CACHE.computeIfAbsent(powerId, PowerKeyManager::getKeyFromPower);
     }
 
     private static String getKeyFromPower(Identifier powerId) {
-        if(PowerTypeRegistry.contains(powerId)) {
-            PowerType<?> powerType = PowerTypeRegistry.get(powerId);
-            Power power = powerType.create(null);
-            String key = "";
-            if (power instanceof Active) {
-                key = ((Active) power).getKey().key;
-            } else if (powerType instanceof MultiplePowerType<?>) {
-                List<Identifier> subs = ((MultiplePowerType<?>) powerType).getSubPowers();
-                for (Identifier sub : subs) {
-                    String subKey = getKeyFromPower(sub);
-                    if (!subKey.isEmpty()) {
-                        return subKey;
-                    }
-                }
-            }
-            return key.equals("none") ? "key.origins.primary_active" : key;
+
+        PowerType<?> power = PowerTypeRegistry.getNullable(powerId);
+        if (power == null || !(power.create(null) instanceof Active activePower)) {
+            return "";
         }
-        return "";
+
+        String key = activePower.getKey().key;
+        return key.equals("none")
+            ? "key.origins.primary_active"
+            : key;
+
     }
+
 }

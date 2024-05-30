@@ -2,6 +2,7 @@ package io.github.apace100.origins.badge;
 
 import com.google.gson.*;
 import io.github.apace100.apoli.integration.PostPowerLoadCallback;
+import io.github.apace100.apoli.integration.PowerOverrideCallback;
 import io.github.apace100.apoli.integration.PrePowerReloadCallback;
 import io.github.apace100.apoli.power.*;
 import io.github.apace100.calio.registry.DataObjectRegistry;
@@ -50,6 +51,7 @@ public final class BadgeManager {
         //register callbacks
         PrePowerReloadCallback.EVENT.register(BadgeManager::clear);
         PowerTypes.registerAdditionalData("badges", BadgeManager::readCustomBadges);
+        PowerOverrideCallback.EVENT.register(BADGES::remove);
         PostPowerLoadCallback.EVENT.register(BadgeManager::readAutoBadges);
         AutoBadgeCallback.EVENT.register(BadgeManager::createAutoBadges);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerTypes.PHASE, PHASE);
