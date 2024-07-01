@@ -20,6 +20,7 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 
 import java.util.*;
 
@@ -189,10 +190,13 @@ public class Origin {
     }
 
     public String getOrCreateNameTranslationKey() {
-        if(nameTranslationKey == null || nameTranslationKey.isEmpty()) {
-            nameTranslationKey = "origin." + identifier.getNamespace() + "." + identifier.getPath() + ".name";
+
+        if (nameTranslationKey == null || nameTranslationKey.isEmpty()) {
+            this.nameTranslationKey = Util.createTranslationKey("origin", identifier) + ".name";
         }
+
         return nameTranslationKey;
+
     }
 
     public MutableText getName() {
@@ -200,10 +204,13 @@ public class Origin {
     }
 
     public String getOrCreateDescriptionTranslationKey() {
-        if(descriptionTranslationKey == null || descriptionTranslationKey.isEmpty()) {
-            descriptionTranslationKey = "origin." + identifier.getNamespace() + "." + identifier.getPath() + ".description";
+
+        if (descriptionTranslationKey == null || descriptionTranslationKey.isEmpty()) {
+            this.descriptionTranslationKey = Util.createTranslationKey("origin", identifier) + ".description";
         }
+
         return descriptionTranslationKey;
+
     }
 
     public MutableText getDescription() {
@@ -265,10 +272,10 @@ public class Origin {
             ((List<OriginUpgrade>)data.get("upgrades")).forEach(origin::addUpgrade);
         }
 
-        origin.setNameText(data.get("name"));
-        origin.setDescriptionText(data.get("description"));
+        return origin
+            .setNameText(data.get("name"))
+            .setDescriptionText(data.get("description"));
 
-        return origin;
     }
 
     public static Origin read(PacketByteBuf buffer) {

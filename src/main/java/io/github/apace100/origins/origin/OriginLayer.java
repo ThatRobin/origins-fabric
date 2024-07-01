@@ -12,6 +12,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedList;
@@ -87,8 +88,8 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
     public String getOrCreateTranslationKey() {
 
-        if(nameTranslationKey == null || nameTranslationKey.isEmpty()) {
-            this.nameTranslationKey = "layer." + id.getNamespace() + "." + id.getPath() + ".name";
+        if (nameTranslationKey == null || nameTranslationKey.isEmpty()) {
+            this.nameTranslationKey = Util.createTranslationKey("layer", id) + ".name";
         }
 
         return nameTranslationKey;
@@ -111,7 +112,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     public String getMissingOriginNameTranslationKey() {
 
         if (missingOriginNameTranslationKey == null || missingOriginNameTranslationKey.isEmpty()) {
-            this.missingOriginNameTranslationKey = "layer." + id.getNamespace() + "." + id.getPath() + ".missing_origin.name";
+            this.missingOriginNameTranslationKey = Util.createTranslationKey("layer", id) + ".missing_origin.name";
         }
 
         return missingOriginNameTranslationKey;
@@ -126,7 +127,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     public String getMissingOriginDescriptionTranslationKey() {
 
         if (missingOriginDescriptionTranslationKey == null || missingOriginDescriptionTranslationKey.isEmpty()) {
-            this.missingOriginDescriptionTranslationKey = "layer." + id.getNamespace() + "." + id.getPath() + ".missing_origin.description";
+            this.missingOriginDescriptionTranslationKey = Util.createTranslationKey("layer", id) + ".missing_origin.description";
         }
 
         return missingOriginDescriptionTranslationKey;
@@ -140,7 +141,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     public String getTitleViewOriginTranslationKey() {
 
         if (titleViewOriginTranslationKey == null || titleViewOriginTranslationKey.isEmpty()) {
-            this.titleViewOriginTranslationKey = "layer." + id.getNamespace() + "." + id.getPath() + ".view_origin.name";
+            this.titleViewOriginTranslationKey = Util.createTranslationKey("layer", id) + ".view_origin.name";
         }
 
         return titleViewOriginTranslationKey;
@@ -158,7 +159,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     public String getTitleChooseOriginTranslationKey() {
 
         if (titleChooseOriginTranslationKey == null || titleChooseOriginTranslationKey.isEmpty()) {
-            this.titleChooseOriginTranslationKey = "layer." + id.getNamespace() + "." + id.getPath() + ".choose_origin.name";
+            this.titleChooseOriginTranslationKey = Util.createTranslationKey("layer", id) + ".choose_origin.name";
         }
 
         return titleChooseOriginTranslationKey;
