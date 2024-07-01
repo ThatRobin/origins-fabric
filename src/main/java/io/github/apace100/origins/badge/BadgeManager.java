@@ -65,7 +65,7 @@ public final class BadgeManager {
 
         badgesBuf.writeMap(BADGES,
             PacketByteBuf::writeIdentifier,
-            (valueBuf, badges) -> valueBuf.writeCollection(badges, REGISTRY::writeDataObject));
+            (valueBuf, badges) -> valueBuf.writeCollection(badges, REGISTRY::sendDataObject));
 
         ServerPlayNetworking.send(player, ModPackets.BADGE_LIST, badgesBuf);
 
