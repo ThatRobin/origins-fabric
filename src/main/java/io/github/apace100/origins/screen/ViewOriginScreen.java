@@ -9,6 +9,8 @@ import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ProfileComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -41,8 +43,8 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 		origins.forEach((layer, origin) -> {
 
 			ItemStack iconStack = origin.getDisplayItem();
-			if (iconStack.isOf(Items.PLAYER_HEAD) && (!iconStack.hasNbt() || !iconStack.getOrCreateNbt().contains("SkullOwner"))) {
-				iconStack.getOrCreateNbt().putString("SkullOwner", player.getName().getString());
+			if (iconStack.isOf(Items.PLAYER_HEAD) && !iconStack.contains(DataComponentTypes.PROFILE)) {
+				iconStack.set(DataComponentTypes.PROFILE, new ProfileComponent(player.getGameProfile()));
 			}
 
 			if (!layer.isHidden() && (origin != Origin.EMPTY || layer.getOriginOptionCount(player) > 0)) {
@@ -61,12 +63,7 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 
 	}
 
-	@Override
-	public boolean shouldCloseOnEsc() {
-		return true;
-	}
-
-	@Override
+    @Override
 	protected void init() {
 
 		super.init();

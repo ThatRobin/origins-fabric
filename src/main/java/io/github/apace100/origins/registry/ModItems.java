@@ -9,9 +9,14 @@ import net.minecraft.registry.Registry;
 
 public class ModItems {
 
-    public static final Item ORB_OF_ORIGIN = new OrbOfOriginItem();
+    public static final Item ORB_OF_ORIGIN;
 
     public static void register() {
-        Registry.register(Registries.ITEM, new Identifier(Origins.MODID, "orb_of_origin"), ORB_OF_ORIGIN);
+
     }
+
+    static {
+        ORB_OF_ORIGIN = Registry.register(Registries.ITEM, Origins.identifier("orb_of_origin"), new OrbOfOriginItem());
+    }
+
 }

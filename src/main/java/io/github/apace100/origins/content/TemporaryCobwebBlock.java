@@ -40,11 +40,4 @@ public class TemporaryCobwebBlock extends CobwebBlock {
 		super.onBlockAdded(state, worldIn, pos, oldState, isMoving);
 	}
 
-	@Override
-	public void onEntityCollision(BlockState state, World worldIn, BlockPos pos, Entity entityIn) {
-		//if (PowerTypes.WEBBING.isActive(entityIn)) {
-		//	return;
-		//}
-		super.onEntityCollision(state, worldIn, pos, entityIn);
-	}
 }

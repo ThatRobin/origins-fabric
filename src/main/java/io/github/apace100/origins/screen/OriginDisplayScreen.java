@@ -31,9 +31,6 @@ import java.util.function.Predicate;
 
 public class OriginDisplayScreen extends Screen {
 
-    @SuppressWarnings("unused") //  The old sprite sheet for the origin screen
-    private static final Identifier WINDOW = new Identifier(Origins.MODID, "textures/gui/choose_origin.png");
-
     private static final Identifier WINDOW_BACKGROUND = Origins.identifier("choose_origin/background");
     private static final Identifier WINDOW_BORDER = Origins.identifier("choose_origin/border");
     private static final Identifier WINDOW_NAME_PLATE = Origins.identifier("choose_origin/name_plate");
@@ -92,24 +89,24 @@ public class OriginDisplayScreen extends Screen {
 
         super.init();
 
-        guiLeft = (this.width - WINDOW_WIDTH) / 2;
-        guiTop = (this.height - WINDOW_HEIGHT) / 2;
+        this.guiLeft = (this.width - WINDOW_WIDTH) / 2;
+        this.guiTop = (this.height - WINDOW_HEIGHT) / 2;
 
-        originNameWidget = new ScrollingTextWidget(guiLeft + 38, guiTop + 18, WINDOW_WIDTH - (62 + 3 * 8), 9, Text.empty(), true, textRenderer);
-        refreshOriginNameWidget = true;
+        this.originNameWidget = new ScrollingTextWidget(guiLeft + 38, guiTop + 18, WINDOW_WIDTH - (62 + 3 * 8), 9, Text.empty(), true, textRenderer);
+        this.refreshOriginNameWidget = true;
 
     }
 
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
 
-        if (!showDirtBackground) {
-            this.renderInGameBackground(context);
-        } else {
-            this.renderBackgroundTexture(context);
+        if (showDirtBackground) {
+            super.renderBackground(context, mouseX, mouseY, delta);
         }
 
-        context.drawGuiTexture(WINDOW_BACKGROUND, guiLeft, guiTop, -4, WINDOW_WIDTH, WINDOW_HEIGHT);
+        else {
+            this.renderInGameBackground(context);
+        }
 
     }
 
@@ -119,23 +116,15 @@ public class OriginDisplayScreen extends Screen {
     }
 
     @Override
-    public void renderBackgroundTexture(DrawContext context) {
-        context.setShaderColor(0.25F, 0.25F, 0.25F, 1.0F);
-        context.drawTexture(OPTIONS_BACKGROUND_TEXTURE, 0, 0, -5, 0.0F, 0.0F, this.width, this.height, 32, 32);
-        context.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-    }
-
-    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 
         renderedBadges.clear();
         this.time += delta;
 
-        this.renderBackground(context, mouseX, mouseY, delta);
-        this.renderOriginWindow(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
+        this.renderOriginWindow(context, mouseX, mouseY, delta);
 
-        if(origin != null) {
+        if (origin != null) {
             renderScrollbar(context, mouseX, mouseY);
             renderBadgeTooltip(context, mouseX, mouseY);
         }
@@ -261,6 +250,8 @@ public class OriginDisplayScreen extends Screen {
     }
 
     protected void renderOriginWindow(DrawContext context, int mouseX, int mouseY, float delta) {
+
+        context.drawGuiTexture(WINDOW_BACKGROUND, guiLeft, guiTop, -4, WINDOW_WIDTH, WINDOW_HEIGHT);
 
         if (origin != null) {
             //context.enableScissor(guiLeft, guiTop, guiLeft + windowWidth, guiTop + windowHeight);

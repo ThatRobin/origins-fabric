@@ -8,6 +8,7 @@ import io.github.apace100.apoli.power.PowerTypes;
 import io.github.apace100.calio.util.IdentifierAlias;
 import io.github.apace100.origins.badge.BadgeManager;
 import io.github.apace100.origins.command.OriginCommand;
+import io.github.apace100.origins.networking.ModPackets;
 import io.github.apace100.origins.networking.ModPacketsC2S;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayers;
@@ -84,8 +85,10 @@ public class Origins implements ModInitializer {
 		ModBlocks.register();
 		ModItems.register();
 		ModTags.register();
+
+		ModPackets.register();
 		ModPacketsC2S.register();
-		ModEnchantments.register();
+
 		ModEntities.register();
 		ModLoot.registerLootTables();
 		ModComponents.register();
@@ -121,7 +124,7 @@ public class Origins implements ModInitializer {
 	}
 
 	public static Identifier identifier(String path) {
-		return new Identifier(Origins.MODID, path);
+		return Identifier.of(Origins.MODID, path);
 	}
 
 	@Config(name = Origins.MODID + "_server")

@@ -5,21 +5,16 @@ import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.origin.OriginLayers;
-import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.*;
 import net.minecraft.world.World;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -76,9 +71,9 @@ public class OrbOfOriginItem extends Item {
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
+    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
 
-        getTargets(stack).forEach((originLayer, origin) -> {
+        this.getTargets(stack).forEach((originLayer, origin) -> {
 
             String baseKey = "item.origins.orb_of_origin.layer_";
             Object[] args;
@@ -102,39 +97,42 @@ public class OrbOfOriginItem extends Item {
 
     private Map<OriginLayer, Origin> getTargets(ItemStack stack) {
 
-        Map<OriginLayer, Origin> targets = new HashMap<>();
+        //  TODO: Re-implement target origins into an item component
+//        Map<OriginLayer, Origin> targets = new HashMap<>();
+//        NbtCompound stackNbt = stack.getNbt();
+//        NbtList targetsNbt = stackNbt == null ? new NbtList() : stackNbt.getList("Targets", NbtElement.COMPOUND_TYPE);
+//
+//        if (targetsNbt.isEmpty()) {
+//            return targets;
+//        }
+//
+//        for (NbtElement nbtElement : targetsNbt) {
+//            try {
+//
+//                NbtCompound targetNbt = (NbtCompound) nbtElement;
+//                Identifier layerId = new Identifier(targetNbt.getString("Layer"));
+//
+//                OriginLayer layer = OriginLayers.getLayer(layerId);
+//                Origin origin = Origin.EMPTY;
+//
+//                if (targetNbt.contains("Origin", NbtElement.STRING_TYPE)) {
+//                    Identifier originId = new Identifier(targetNbt.getString("Origin"));
+//                    origin = OriginRegistry.get(originId);
+//                }
+//
+//                if (layer.isEnabled() && (layer.contains(origin) || origin.isSpecial())) {
+//                    targets.put(layer, origin);
+//                }
+//
+//            } catch (Exception ignored) {
+//
+//            }
+//        }
+//
+//        return targets;
 
-        NbtCompound stackNbt = stack.getNbt();
-        NbtList targetsNbt = stackNbt == null ? new NbtList() : stackNbt.getList("Targets", NbtElement.COMPOUND_TYPE);
-
-        if (targetsNbt.isEmpty()) {
-            return targets;
-        }
-
-        for (NbtElement nbtElement : targetsNbt) {
-            try {
-
-                NbtCompound targetNbt = (NbtCompound) nbtElement;
-                Identifier layerId = new Identifier(targetNbt.getString("Layer"));
-
-                OriginLayer layer = OriginLayers.getLayer(layerId);
-                Origin origin = Origin.EMPTY;
-
-                if (targetNbt.contains("Origin", NbtElement.STRING_TYPE)) {
-                    Identifier originId = new Identifier(targetNbt.getString("Origin"));
-                    origin = OriginRegistry.get(originId);
-                }
-
-                if (layer.isEnabled() && (layer.contains(origin) || origin.isSpecial())) {
-                    targets.put(layer, origin);
-                }
-
-            } catch (Exception ignored) {
-
-            }
-        }
-
-        return targets;
+        return new HashMap<>();
 
     }
+
 }

@@ -35,20 +35,22 @@ public class ModPacketsS2C {
     @Environment(EnvType.CLIENT)
     public static void register() {
 
-        ClientConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.TYPE, ModPacketsS2C::handleHandshake);
+        ClientConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.PACKET_ID, ModPacketsS2C::handleHandshake);
 
         ClientPlayConnectionEvents.INIT.register(((clientPlayNetworkHandler, minecraftClient) -> {
-            ClientPlayNetworking.registerReceiver(OpenChooseOriginScreenS2CPacket.TYPE, ModPacketsS2C::openOriginScreen);
-            ClientPlayNetworking.registerReceiver(SyncOriginRegistryS2CPacket.TYPE, ModPacketsS2C::receiveOriginList);
-            ClientPlayNetworking.registerReceiver(SyncOriginLayerRegistryS2CPacket.TYPE, ModPacketsS2C::receiveLayerList);
-            ClientPlayNetworking.registerReceiver(ConfirmOriginS2CPacket.TYPE, ModPacketsS2C::receiveOriginConfirmation);
-            ClientPlayNetworking.registerReceiver(ModPackets.BADGE_LIST, ModPacketsS2C::receiveBadgeList);
+            ClientPlayNetworking.registerReceiver(ConfirmOriginS2CPacket.PACKET_ID, ModPacketsS2C::receiveOriginConfirmation);
+            ClientPlayNetworking.registerReceiver(OpenChooseOriginScreenS2CPacket.PACKET_ID, ModPacketsS2C::openOriginScreen);
+            ClientPlayNetworking.registerReceiver(SyncOriginLayerRegistryS2CPacket.PACKET_ID, ModPacketsS2C::receiveLayerList);
+            ClientPlayNetworking.registerReceiver(SyncOriginRegistryS2CPacket.PACKET_ID, ModPacketsS2C::receiveOriginList);
+            ClientPlayNetworking.registerReceiver(SyncBadgeRegistryS2CPacket.PACKET_ID, ModPacketsS2C::receiveBadgeList);
         }));
 
     }
 
     @Environment(EnvType.CLIENT)
-    private static void receiveOriginConfirmation(ConfirmOriginS2CPacket packet, ClientPlayerEntity player, PacketSender responseSender) {
+    private static void receiveOriginConfirmation(ConfirmOriginS2CPacket packet, ClientPlayNetworking.Context context) {
+
+        ClientPlayerEntity player = context.player();
 
         OriginLayer layer = OriginLayers.getLayer(packet.layerId());
         Origin origin = OriginRegistry.get(packet.originId());
@@ -63,15 +65,15 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void handleHandshake(VersionHandshakePacket packet, PacketSender responseSender) {
-        responseSender.sendPacket(new VersionHandshakePacket(Origins.SEMVER));
+    private static void handleHandshake(VersionHandshakePacket packet, ClientConfigurationNetworking.Context context) {
+        context.responseSender().sendPacket(new VersionHandshakePacket(Origins.SEMVER));
     }
 
     @Environment(EnvType.CLIENT)
-    private static void openOriginScreen(OpenChooseOriginScreenS2CPacket packet, ClientPlayerEntity player, PacketSender responseSender) {
+    private static void openOriginScreen(OpenChooseOriginScreenS2CPacket packet, ClientPlayNetworking.Context context) {
 
-        ArrayList<OriginLayer> layers = new ArrayList<>();
-        OriginComponent component = ModComponents.ORIGIN.get(player);
+        List<OriginLayer> layers = new ArrayList<>();
+        OriginComponent component = ModComponents.ORIGIN.get(context.player());
 
         OriginLayers.getLayers()
             .stream()
@@ -84,7 +86,7 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void receiveOriginList(SyncOriginRegistryS2CPacket packet, ClientPlayerEntity player, PacketSender responseSender) {
+    private static void receiveOriginList(SyncOriginRegistryS2CPacket packet, ClientPlayNetworking.Context context) {
 
         OriginsClient.isServerRunningOrigins = true;
 
@@ -98,7 +100,7 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void receiveLayerList(SyncOriginLayerRegistryS2CPacket packet, ClientPlayerEntity player, PacketSender responseSender) {
+    private static void receiveLayerList(SyncOriginLayerRegistryS2CPacket packet, ClientPlayNetworking.Context context) {
 
         OriginLayers.clear();
         packet.layers().forEach(OriginLayers::register);
@@ -108,18 +110,9 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void receiveBadgeList(MinecraftClient client, ClientPlayNetworkHandler handler, PacketByteBuf buf, PacketSender responseSender) {
-
-        Map<Identifier, List<Badge>> badges = buf.readMap(
-            PacketByteBuf::readIdentifier,
-            valueBuf -> valueBuf.readCollection(size -> new LinkedList<>(), BadgeManager.REGISTRY::receiveDataObject)
-        );
-
-        client.execute(() -> {
-            BadgeManager.clear();
-            badges.forEach(BadgeManager::putPowerBadges);
-        });
-
+    private static void receiveBadgeList(SyncBadgeRegistryS2CPacket payload, ClientPlayNetworking.Context context) {
+        BadgeManager.clear();
+        payload.badges().forEach(BadgeManager::putPowerBadges);
     }
 
 }

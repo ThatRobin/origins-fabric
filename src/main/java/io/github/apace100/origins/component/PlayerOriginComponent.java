@@ -13,6 +13,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -152,7 +153,7 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     @Override
-    public void readFromNbt(@NotNull NbtCompound compoundTag) {
+    public void readFromNbt(@NotNull NbtCompound compoundTag, RegistryWrapper.WrapperLookup wrapperLookup) {
 
         if (player == null) {
             Origins.LOGGER.error("Player was null in PlayerOriginComponent#fromTag! This is not supposed to happen D:");
@@ -167,7 +168,7 @@ public class PlayerOriginComponent implements OriginComponent {
             try {
 
                 OriginLayer defaultOriginLayer = OriginLayers.getLayer(Origins.identifier("origin"));
-                origins.put(defaultOriginLayer, OriginRegistry.get(new Identifier(compoundTag.getString("Origin"))));
+                origins.put(defaultOriginLayer, OriginRegistry.get(Identifier.of(compoundTag.getString("Origin"))));
 
             } catch (Exception ignored) {
                 Origins.LOGGER.warn("Player {} had old origin which could not be migrated: {}", player.getName().getString(), compoundTag.getString("Origin"));
@@ -180,8 +181,8 @@ public class PlayerOriginComponent implements OriginComponent {
                 NbtCompound originLayerNbt = originLayersNbt.getCompound(i);
                 try {
 
-                    Identifier layerId = new Identifier(originLayerNbt.getString("Layer"));
-                    Identifier originId = new Identifier(originLayerNbt.getString("Origin"));
+                    Identifier layerId = Identifier.of(originLayerNbt.getString("Layer"));
+                    Identifier originId = Identifier.of(originLayerNbt.getString("Origin"));
 
                     OriginLayer layer = OriginLayers.getLayer(layerId);
                     Origin origin = OriginRegistry.get(originId);
@@ -236,7 +237,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
             try {
 
-                Identifier legacyPowerId = new Identifier(legacyPowerString);
+                Identifier legacyPowerId = Identifier.of(legacyPowerString);
                 PowerType<?> legacyPowerType = PowerTypeRegistry.get(legacyPowerId);
 
                 if (!powerComponent.hasPower(legacyPowerType)) {
@@ -262,12 +263,7 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     @Override
-    public void onPowersRead() {
-        // NO-OP
-    }
-
-    @Override
-    public void writeToNbt(@NotNull NbtCompound compoundTag) {
+    public void writeToNbt(@NotNull NbtCompound compoundTag, RegistryWrapper.WrapperLookup wrapperLookup) {
 
         NbtList originLayersNbt = new NbtList();
         origins.forEach((layer, origin) -> {

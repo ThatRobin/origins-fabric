@@ -1,83 +1,108 @@
 package io.github.apace100.origins.registry;
 
-import net.fabricmc.fabric.api.loot.v2.LootTableEvents;
+import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentLevelEntry;
-import net.minecraft.item.EnchantedBookItem;
 import net.minecraft.item.Items;
 import net.minecraft.loot.LootPool;
+import net.minecraft.loot.LootTable;
 import net.minecraft.loot.entry.EmptyEntry;
 import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.function.SetNbtLootFunction;
+import net.minecraft.loot.function.SetEnchantmentsLootFunction;
 import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.*;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.BiFunction;
 
 public class ModLoot {
 
-    private static final Identifier DUNGEON_LOOT = new Identifier("minecraft", "chests/simple_dungeon");
-    private static final Identifier STRONGHOLD_LIBRARY = new Identifier("minecraft", "chests/stronghold_library");
-    private static final Identifier MINESHAFT = new Identifier("minecraft", "chests/abandoned_mineshaft");
-    private static final Identifier WATER_RUIN = new Identifier("minecraft", "chests/underwater_ruin_small");
+    private static final Set<RegistryKey<LootTable>> AFFECTED_TABLES = new HashSet<>();
+
+    private static final RegistryKey<LootTable> SIMPLE_DUNGEON = getAndAddTable("chests/simple_dungeon");
+    private static final RegistryKey<LootTable> STRONGHOLD_LIBRARY = getAndAddTable("chests/stronghold_library");
+    private static final RegistryKey<LootTable> MINESHAFT = getAndAddTable("chests/abandoned_mineshaft");
+    private static final RegistryKey<LootTable> SMALL_UNDERWATER_RUIN = getAndAddTable("chests/underwater_ruin_small");
+
+    private static final BiFunction<RegistryEntry<Enchantment>, Integer, SetEnchantmentsLootFunction.Builder> SIMPLE_ENCHANTMENT_SETTER = (enchantmentEntry, levels) ->
+        new SetEnchantmentsLootFunction.Builder()
+            .enchantment(enchantmentEntry, ConstantLootNumberProvider.create(levels));
+
+    private static RegistryKey<LootTable> getAndAddTable(String path) {
+
+        RegistryKey<LootTable> tableKey = RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of(path));
+        AFFECTED_TABLES.add(tableKey);
+
+        return tableKey;
+
+    }
 
     public static void registerLootTables() {
-        NbtCompound waterProtectionLevel1 = createEnchantmentTag(ModEnchantments.WATER_PROTECTION, 1);
-        NbtCompound waterProtectionLevel2 = createEnchantmentTag(ModEnchantments.WATER_PROTECTION, 2);
-        NbtCompound waterProtectionLevel3 = createEnchantmentTag(ModEnchantments.WATER_PROTECTION, 3);
-        LootTableEvents.MODIFY.register(((resourceManager, lootManager, identifier, tableBuilder, source) -> {
-            if (!source.isBuiltin()) {
+        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+
+            if (!AFFECTED_TABLES.contains(key)) {
                 return;
             }
-            if (DUNGEON_LOOT.equals(identifier)) {
-                LootPool.Builder lootPool = new LootPool.Builder();
-                lootPool.rolls(ConstantLootNumberProvider.create(1))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
+
+            RegistryEntry<Enchantment> waterProtection = registries
+                .getWrapperOrThrow(RegistryKeys.ENCHANTMENT)
+                .getOrThrow(ModEnchantments.WATER_PROTECTION);
+
+            if (key.equals(SIMPLE_DUNGEON)) {
+                tableBuilder.pool(new LootPool.Builder()
+                    .rolls(ConstantLootNumberProvider.create(1.0F))
+                    .with(ItemEntry.builder(Items.BOOK)
                         .weight(20)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel1)))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
+                    .with(ItemEntry.builder(Items.BOOK)
                         .weight(10)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel2)))
-                    .with(EmptyEntry.builder().weight(80));
-                tableBuilder.pool(lootPool);
-            } else if (STRONGHOLD_LIBRARY.equals(identifier)) {
-                LootPool.Builder lootPool = new LootPool.Builder();
-                lootPool.rolls(ConstantLootNumberProvider.create(1))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(20)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel2)))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(10)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel3)))
-                    .with(EmptyEntry.builder().weight(80));
-                tableBuilder.pool(lootPool);
-            } else if (MINESHAFT.equals(identifier)) {
-                LootPool.Builder lootPool = new LootPool.Builder();
-                lootPool.rolls(ConstantLootNumberProvider.create(1))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(20)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel1)))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(5)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel2)))
-                    .with(EmptyEntry.builder().weight(90));
-                tableBuilder.pool(lootPool);
-            } else if (WATER_RUIN.equals(identifier)) {
-                LootPool.Builder lootPool = new LootPool.Builder();
-                lootPool.rolls(ConstantLootNumberProvider.create(1))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(10)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel1)))
-                    .with(ItemEntry.builder(Items.ENCHANTED_BOOK)
-                        .weight(20)
-                        .apply(SetNbtLootFunction.builder(waterProtectionLevel2)))
-                    .with(EmptyEntry.builder().weight(110));
-                tableBuilder.pool(lootPool);
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
+                    .with(EmptyEntry.builder()
+                        .weight(80)));
             }
-        }));
+
+            else if (key.equals(STRONGHOLD_LIBRARY)) {
+                tableBuilder.pool(new LootPool.Builder()
+                    .rolls(ConstantLootNumberProvider.create(1.0F))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(20)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(10)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 3)))
+                    .with(EmptyEntry.builder()
+                        .weight(80)));
+            }
+
+            else if (key.equals(MINESHAFT)) {
+                tableBuilder.pool(new LootPool.Builder()
+                    .rolls(ConstantLootNumberProvider.create(1.0F))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(20)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(5)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
+                    .with(EmptyEntry.builder()
+                        .weight(90)));
+            }
+
+            else if (key.equals(SMALL_UNDERWATER_RUIN)) {
+                tableBuilder.pool(new LootPool.Builder()
+                    .rolls(ConstantLootNumberProvider.create(1.0F))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(10)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
+                    .with(ItemEntry.builder(Items.BOOK)
+                        .weight(20)
+                        .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
+                    .with(EmptyEntry.builder()
+                        .weight(110)));
+            }
+
+        });
     }
 
-    private static NbtCompound createEnchantmentTag(Enchantment enchantment, int level) {
-        EnchantmentLevelEntry entry = new EnchantmentLevelEntry(enchantment, level);
-        return EnchantedBookItem.forEnchantment(entry).getNbt();
-    }
 }

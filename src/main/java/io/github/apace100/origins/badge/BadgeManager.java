@@ -10,14 +10,17 @@ import io.github.apace100.calio.util.DynamicIdentifier;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.integration.AutoBadgeCallback;
 import io.github.apace100.origins.networking.ModPackets;
+import io.github.apace100.origins.networking.packet.s2c.SyncBadgeRegistryS2CPacket;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.recipe.ShapedRecipe;
+import net.minecraft.recipe.input.RecipeInput;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -59,16 +62,7 @@ public final class BadgeManager {
     }
 
     public static void sync(ServerPlayerEntity player) {
-
-        PacketByteBuf badgesBuf = PacketByteBufs.create();
-        REGISTRY.sync(player);
-
-        badgesBuf.writeMap(BADGES,
-            PacketByteBuf::writeIdentifier,
-            (valueBuf, badges) -> valueBuf.writeCollection(badges, REGISTRY::sendDataObject));
-
-        ServerPlayNetworking.send(player, ModPackets.BADGE_LIST, badgesBuf);
-
+        ServerPlayNetworking.send(player, new SyncBadgeRegistryS2CPacket(BADGES));
     }
 
     public static void register(BadgeFactory factory) {
@@ -184,12 +178,22 @@ public final class BadgeManager {
 
         } else if (power instanceof RecipePower recipePower) {
 
-            RecipeEntry<Recipe<CraftingInventory>> entry = recipePower.getRecipe();
-            String type = (Recipe<?>) entry.value() instanceof ShapedRecipe ? "shaped" : "shapeless";
+            RecipeEntry<Recipe<? extends RecipeInput>> entry = recipePower.getRecipe();
+            if (!(entry.value() instanceof CraftingRecipe craftingRecipe)) {
+                return;
+            }
 
-            badgeList.add(new CraftingRecipeBadge(
-                RECIPE_BADGE_SPRITE, entry, Text.translatable("origins.gui.badge.recipe.crafting." + type), null
-            ));
+            String type = craftingRecipe instanceof ShapedRecipe
+                ? "shaped"
+                : "shapeless";
+            CraftingRecipeBadge badge = new CraftingRecipeBadge(
+                RECIPE_BADGE_SPRITE,
+                new RecipeEntry<>(entry.id(), craftingRecipe),
+                Text.translatable("origins.gui.badge.recipe.crafting." + type),
+                null
+            );
+
+            badgeList.add(badge);
 
         }
 

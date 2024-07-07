@@ -10,14 +10,18 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
+import net.minecraft.network.packet.s2c.play.PositionFlag;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
 
+import java.util.Set;
+
 public class EnderianPearlEntity extends ThrownItemEntity {
-   public EnderianPearlEntity(EntityType<? extends EnderianPearlEntity> entityType, World world) {
+
+   public EnderianPearlEntity(EntityType<? extends ThrownItemEntity> entityType, World world) {
       super(entityType, world);
    }
 
@@ -43,9 +47,8 @@ public class EnderianPearlEntity extends ThrownItemEntity {
       }
 
       if (!this.getWorld().isClient && !this.isRemoved()) {
-         if (entity instanceof ServerPlayerEntity) {
-            ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)entity;
-            if (serverPlayerEntity.networkHandler.isConnectionOpen() && serverPlayerEntity.getWorld() == this.getWorld() && !serverPlayerEntity.isSleeping()) {
+         if (entity instanceof ServerPlayerEntity serverPlayerEntity) {
+             if (serverPlayerEntity.networkHandler.isConnectionOpen() && serverPlayerEntity.getWorld() == this.getWorld() && !serverPlayerEntity.isSleeping()) {
 
                if (entity.hasVehicle()) {
                   entity.stopRiding();
@@ -74,12 +77,4 @@ public class EnderianPearlEntity extends ThrownItemEntity {
 
    }
 
-   public Entity moveToWorld(ServerWorld destination) {
-      Entity entity = this.getOwner();
-      if (entity != null && entity.getWorld().getRegistryKey() != destination.getRegistryKey()) {
-         this.setOwner((Entity)null);
-      }
-
-      return super.moveToWorld(destination);
-   }
 }

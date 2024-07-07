@@ -12,7 +12,6 @@ import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.origin.OriginLayers;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
-import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -24,22 +23,23 @@ import net.minecraft.util.Identifier;
 
 import java.util.List;
 
-@SuppressWarnings("UnstableApiUsage")
 public class ModPacketsC2S {
 
     public static void register() {
 
         if (Origins.config.performVersionCheck) {
             ServerConfigurationConnectionEvents.CONFIGURE.register(ModPacketsC2S::handshake);
-            ServerConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.TYPE, ModPacketsC2S::handleHandshakeReply);
+            ServerConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.PACKET_ID, ModPacketsC2S::handleHandshakeReply);
         }
 
-        ServerPlayNetworking.registerGlobalReceiver(ChooseOriginC2SPacket.TYPE, ModPacketsC2S::onChooseOrigin);
-        ServerPlayNetworking.registerGlobalReceiver(ChooseRandomOriginC2SPacket.TYPE, ModPacketsC2S::chooseRandomOrigin);
+        ServerPlayNetworking.registerGlobalReceiver(ChooseOriginC2SPacket.PACKET_ID, ModPacketsC2S::onChooseOrigin);
+        ServerPlayNetworking.registerGlobalReceiver(ChooseRandomOriginC2SPacket.PACKET_ID, ModPacketsC2S::chooseRandomOrigin);
 
     }
 
-    private static void onChooseOrigin(ChooseOriginC2SPacket packet, ServerPlayerEntity player, PacketSender responseSender) {
+    private static void onChooseOrigin(ChooseOriginC2SPacket packet, ServerPlayNetworking.Context context) {
+
+        ServerPlayerEntity player = context.player();
 
         OriginComponent component = ModComponents.ORIGIN.get(player);
         OriginLayer layer = OriginLayers.getLayer(packet.layerId());
@@ -78,7 +78,9 @@ public class ModPacketsC2S {
 
     }
 
-    private static void chooseRandomOrigin(ChooseRandomOriginC2SPacket packet, ServerPlayerEntity player, PacketSender responseSender) {
+    private static void chooseRandomOrigin(ChooseRandomOriginC2SPacket packet, ServerPlayNetworking.Context context) {
+
+        ServerPlayerEntity player = context.player();
 
         OriginComponent component = ModComponents.ORIGIN.get(player);
         OriginLayer layer = OriginLayers.getLayer(packet.layerId());
@@ -119,9 +121,11 @@ public class ModPacketsC2S {
 
     }
 
-    private static void handleHandshakeReply(VersionHandshakePacket packet, ServerConfigurationNetworkHandler handler, PacketSender responseSender) {
+    private static void handleHandshakeReply(VersionHandshakePacket packet, ServerConfigurationNetworking.Context context) {
 
+        ServerConfigurationNetworkHandler handler = context.networkHandler();
         boolean mismatch = packet.semver().length != Origins.SEMVER.length;
+
         for (int i = 0; !mismatch && i < packet.semver().length - 1; i++) {
 
             if (packet.semver()[i] != Origins.SEMVER[i]) {
@@ -133,29 +137,33 @@ public class ModPacketsC2S {
 
         if (!mismatch) {
             handler.completeTask(VersionHandshakeTask.KEY);
-            return;
         }
 
-        StringBuilder semverString = new StringBuilder();
-        String separator = "";
+        else {
 
-        for (int i : packet.semver()) {
-            semverString.append(separator).append(i);
-            separator = ".";
+            StringBuilder semverString = new StringBuilder();
+            String separator = "";
+
+            for (int i : packet.semver()) {
+                semverString.append(separator).append(i);
+                separator = ".";
+            }
+
+            handler.disconnect(Text.translatable("origins.gui.version_mismatch", Origins.VERSION, semverString));
+
         }
-
-        handler.disconnect(Text.translatable("origins.gui.version_mismatch", Origins.VERSION, semverString));
 
     }
 
     private static void handshake(ServerConfigurationNetworkHandler handler, MinecraftServer server) {
 
-        if (ServerConfigurationNetworking.canSend(handler, VersionHandshakePacket.TYPE)) {
+        if (ServerConfigurationNetworking.canSend(handler, VersionHandshakePacket.PACKET_ID)) {
             handler.addTask(new VersionHandshakeTask(Origins.SEMVER));
-            return;
         }
 
-        handler.disconnect(Text.of("This server requires you to install the Origins mod (v " + Origins.VERSION + ") to play."));
+        else {
+            handler.disconnect(Text.of("This server requires you to install the Origins mod (v " + Origins.VERSION + ") to play."));
+        }
 
     }
 

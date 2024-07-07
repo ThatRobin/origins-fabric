@@ -15,10 +15,7 @@ import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.recipe.ShapedRecipe;
+import net.minecraft.recipe.*;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -32,7 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public record CraftingRecipeBadge(Identifier spriteId,
-                                  RecipeEntry<Recipe<CraftingInventory>> recipe,
+                                  RecipeEntry<CraftingRecipe> recipe,
                                   @Nullable Text prefix,
                                   @Nullable Text suffix) implements Badge {
 

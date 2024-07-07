@@ -9,7 +9,7 @@ import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.data.OriginsDataTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -374,12 +374,12 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return Integer.compare(order, o.order);
     }
 
-    public void write(PacketByteBuf buffer) {
-        DATA.write(buffer, toData());
+    public void write(RegistryByteBuf buf) {
+        DATA.write(buf, toData());
     }
 
-    public static OriginLayer read(PacketByteBuf buffer) {
-        return fromData(DATA.read(buffer));
+    public static OriginLayer read(RegistryByteBuf buf) {
+        return fromData(DATA.read(buf));
     }
 
     public static OriginLayer fromJson(Identifier id, JsonObject json) {
@@ -449,12 +449,12 @@ public class OriginLayer implements Comparable<OriginLayer> {
             return origins;
         }
 
-        public void write(PacketByteBuf buffer) {
-            OriginsDataTypes.CONDITIONED_ORIGIN.send(buffer, this);
+        public void write(RegistryByteBuf buf) {
+            OriginsDataTypes.CONDITIONED_ORIGIN.send(buf, this);
         }
 
-        public static ConditionedOrigin read(PacketByteBuf buffer) {
-            return OriginsDataTypes.ORIGIN_OR_CONDITIONED_ORIGIN.receive(buffer);
+        public static ConditionedOrigin read(RegistryByteBuf buf) {
+            return OriginsDataTypes.ORIGIN_OR_CONDITIONED_ORIGIN.receive(buf);
         }
 
         public static ConditionedOrigin read(JsonElement element) {

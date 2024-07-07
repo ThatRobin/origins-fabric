@@ -9,6 +9,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.ProfileComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -22,7 +24,7 @@ import java.util.List;
 
 public class ChooseOriginScreen extends OriginDisplayScreen {
 
-	private final ArrayList<OriginLayer> layerList;
+	private final List<OriginLayer> layerList;
 	private final List<Origin> originSelection;
 
 	private final int currentLayerIndex;
@@ -33,7 +35,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 	private int maxSelection = 0;
 
 	
-	public ChooseOriginScreen(ArrayList<OriginLayer> layerList, int currentLayerIndex, boolean showDirtBackground) {
+	public ChooseOriginScreen(List<OriginLayer> layerList, int currentLayerIndex, boolean showDirtBackground) {
 		super(Text.translatable(Origins.MODID + ".screen.choose_origin"), showDirtBackground);
 
 		this.layerList = layerList;
@@ -54,8 +56,8 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 			}
 
 			ItemStack iconStack = origin.getDisplayItem();
-			if (iconStack.isOf(Items.PLAYER_HEAD) && (!iconStack.hasNbt() || !iconStack.getOrCreateNbt().contains("SkullOwner"))) {
-				iconStack.getOrCreateNbt().putString("SkullOwner", player.getName().getString());
+			if (iconStack.isOf(Items.PLAYER_HEAD) && !iconStack.contains(DataComponentTypes.PROFILE)) {
+				iconStack.set(DataComponentTypes.PROFILE, new ProfileComponent(player.getGameProfile()));
 			}
 
 			originSelection.add(origin);

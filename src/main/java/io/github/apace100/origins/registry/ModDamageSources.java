@@ -9,14 +9,16 @@ import net.minecraft.registry.RegistryKeys;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public class ModDamageSources {
 
     public static final RegistryKey<DamageType> NO_WATER_FOR_GILLS = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Origins.identifier("no_water_for_gills"));
 
-    private static final Map<RegistryKey<DamageType>, DamageSource> damageSourceCache = new HashMap<>();
+    private static final Map<RegistryKey<DamageType>, DamageSource> damageSourceCache = new WeakHashMap<>();
 
     public static DamageSource getSource(DamageSources damageSources, RegistryKey<DamageType> damageType) {
         return damageSourceCache.computeIfAbsent(damageType, damageSources::create);
     }
+
 }

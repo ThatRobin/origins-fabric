@@ -30,7 +30,7 @@ public class ChoseOriginCriterion extends AbstractCriterion<ChoseOriginCriterion
     public record Conditions(Optional<LootContextPredicate> player, Identifier originId) implements AbstractCriterion.Conditions {
 
         public static final Codec<Conditions> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Codecs.createStrictOptionalFieldCodec(EntityPredicate.LOOT_CONTEXT_PREDICATE_CODEC, "player").forGetter(Conditions::player),
+            EntityPredicate.LOOT_CONTEXT_PREDICATE_CODEC.optionalFieldOf("player").forGetter(Conditions::player),
             Identifier.CODEC.fieldOf("origin").forGetter(Conditions::originId)
         ).apply(instance, Conditions::new));
 

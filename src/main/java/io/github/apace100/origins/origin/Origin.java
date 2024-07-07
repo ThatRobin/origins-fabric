@@ -16,7 +16,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -40,7 +40,7 @@ public class Origin {
     public static final Origin EMPTY;
 
     static {
-        EMPTY = register(new Origin(new Identifier(Origins.MODID, "empty"), new ItemStack(Items.AIR), Impact.NONE, -1, Integer.MAX_VALUE).setUnchoosable().setSpecial());
+        EMPTY = register(new Origin(Origins.identifier("empty"), new ItemStack(Items.AIR), Impact.NONE, -1, Integer.MAX_VALUE).setUnchoosable().setSpecial());
     }
 
     public static void init() {
@@ -239,9 +239,9 @@ public class Origin {
 
     }
 
-    public void write(PacketByteBuf buffer) {
-        buffer.writeIdentifier(identifier);
-        DATA.write(buffer, toData());
+    public void write(RegistryByteBuf buf) {
+        buf.writeIdentifier(identifier);
+        DATA.write(buf, toData());
     }
 
     @SuppressWarnings("unchecked")
@@ -278,9 +278,9 @@ public class Origin {
 
     }
 
-    public static Origin read(PacketByteBuf buffer) {
-        Identifier id = new Identifier(buffer.readString());
-        return createFromData(id, DATA.read(buffer));
+    public static Origin read(RegistryByteBuf buf) {
+        Identifier id = buf.readIdentifier();
+        return createFromData(id, DATA.read(buf));
     }
 
     public static Origin fromJson(Identifier id, JsonObject json) {

@@ -3,6 +3,7 @@ package io.github.apace100.origins.registry;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.content.TemporaryCobwebBlock;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.MapColor;
 import net.minecraft.item.BlockItem;
@@ -11,22 +12,34 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
 
+import java.util.function.Supplier;
+
 public class ModBlocks {
 
-    public static final Block TEMPORARY_COBWEB = new TemporaryCobwebBlock(FabricBlockSettings.create().mapColor(MapColor.WHITE_GRAY).solid().noCollision().requiresTool().strength(4.0F));
+    public static final TemporaryCobwebBlock TEMPORARY_COBWEB;
 
     public static void register() {
-        register("temporary_cobweb", TEMPORARY_COBWEB, false);
+
     }
 
-    private static void register(String blockName, Block block) {
-        register(blockName, block, true);
-    }
+    private static <B extends Block> B register(String blockId, boolean withBlockItem, Supplier<B> blockSupplier) {
 
-    private static void register(String blockName, Block block, boolean withBlockItem) {
-        Registry.register(Registries.BLOCK, new Identifier(Origins.MODID, blockName), block);
-        if(withBlockItem) {
-            Registry.register(Registries.ITEM, new Identifier(Origins.MODID, blockName), new BlockItem(block, new Item.Settings()));
+        B block = Registry.register(Registries.BLOCK, Origins.identifier(blockId), blockSupplier.get());
+        if (withBlockItem) {
+            Registry.register(Registries.ITEM, Origins.identifier(blockId), new BlockItem(block, new Item.Settings()));
         }
+
+        return block;
+
     }
+
+    static {
+        TEMPORARY_COBWEB = register("temporary_cobweb", true, () -> new TemporaryCobwebBlock(AbstractBlock.Settings.create()
+            .mapColor(MapColor.WHITE_GRAY)
+            .strength(4.0F)
+            .requiresTool()
+            .noCollision()
+            .solid()));
+    }
+
 }

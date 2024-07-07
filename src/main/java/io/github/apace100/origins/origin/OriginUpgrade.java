@@ -5,6 +5,7 @@ import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.data.OriginsDataTypes;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,11 +50,11 @@ public record OriginUpgrade(Identifier advancementCondition, Identifier upgradeT
         return new OriginUpgrade(data.get("condition"), data.get("origin"), data.get("announcement"));
     }
 
-    public void write(PacketByteBuf buffer) {
+    public void write(RegistryByteBuf buffer) {
         OriginsDataTypes.UPGRADE.send(buffer, this);
     }
 
-    public static OriginUpgrade read(PacketByteBuf buffer) {
+    public static OriginUpgrade read(RegistryByteBuf buffer) {
         return fromData(DATA.read(buffer));
     }
 

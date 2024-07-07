@@ -1,28 +1,19 @@
 package io.github.apace100.origins.networking.packet.s2c;
 
 import io.github.apace100.origins.Origins;
-import net.fabricmc.fabric.api.networking.v1.FabricPacket;
-import net.fabricmc.fabric.api.networking.v1.PacketType;
-import net.minecraft.network.PacketByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.codec.PacketCodecs;
+import net.minecraft.network.packet.CustomPayload;
 
-public record OpenChooseOriginScreenS2CPacket(boolean showBackground) implements FabricPacket {
+public record OpenChooseOriginScreenS2CPacket(boolean showBackground) implements CustomPayload {
 
-    public static final PacketType<OpenChooseOriginScreenS2CPacket> TYPE = PacketType.create(
-        Origins.identifier("s2c/open_origin_screen"), OpenChooseOriginScreenS2CPacket::read
-    );
-
-    private static OpenChooseOriginScreenS2CPacket read(PacketByteBuf buffer) {
-        return new OpenChooseOriginScreenS2CPacket(buffer.readBoolean());
-    }
+    public static final Id<OpenChooseOriginScreenS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/open_origin_screen"));
+    public static final PacketCodec<ByteBuf, OpenChooseOriginScreenS2CPacket> PACKET_CODEC = PacketCodecs.BOOL.xmap(OpenChooseOriginScreenS2CPacket::new, OpenChooseOriginScreenS2CPacket::showBackground);
 
     @Override
-    public void write(PacketByteBuf buffer) {
-        buffer.writeBoolean(showBackground);
-    }
-
-    @Override
-    public PacketType<?> getType() {
-        return TYPE;
+    public Id<? extends CustomPayload> getId() {
+        return PACKET_ID;
     }
 
 }

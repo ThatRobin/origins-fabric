@@ -1,29 +1,19 @@
 package io.github.apace100.origins.networking.packet.c2s;
 
 import io.github.apace100.origins.Origins;
-import net.fabricmc.fabric.api.networking.v1.FabricPacket;
-import net.fabricmc.fabric.api.networking.v1.PacketType;
-import net.minecraft.network.PacketByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 
-public record ChooseRandomOriginC2SPacket(Identifier layerId) implements FabricPacket {
+public record ChooseRandomOriginC2SPacket(Identifier layerId) implements CustomPayload {
 
-    public static final PacketType<ChooseRandomOriginC2SPacket> TYPE = PacketType.create(
-        Origins.identifier("c2s/choose_random_origin"), ChooseRandomOriginC2SPacket::read
-    );
-
-    private static ChooseRandomOriginC2SPacket read(PacketByteBuf buffer) {
-        return new ChooseRandomOriginC2SPacket(buffer.readIdentifier());
-    }
+    public static final Id<ChooseRandomOriginC2SPacket> PACKET_ID = new Id<>(Origins.identifier("c2s/choose_random_origin"));
+    public static final PacketCodec<ByteBuf, ChooseRandomOriginC2SPacket> PACKET_CODEC = Identifier.PACKET_CODEC.xmap(ChooseRandomOriginC2SPacket::new, ChooseRandomOriginC2SPacket::layerId);
 
     @Override
-    public void write(PacketByteBuf buffer) {
-        buffer.writeIdentifier(layerId);
-    }
-
-    @Override
-    public PacketType<?> getType() {
-        return TYPE;
+    public Id<? extends CustomPayload> getId() {
+        return PACKET_ID;
     }
 
 }

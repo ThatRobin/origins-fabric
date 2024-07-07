@@ -3,31 +3,30 @@ package io.github.apace100.origins.networking.packet.s2c;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.Origin;
-import net.fabricmc.fabric.api.networking.v1.FabricPacket;
-import net.fabricmc.fabric.api.networking.v1.PacketType;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 
 import java.util.Map;
 
-public record SyncOriginRegistryS2CPacket(Map<Identifier, SerializableData.Instance> origins) implements FabricPacket {
+public record SyncOriginRegistryS2CPacket(Map<Identifier, SerializableData.Instance> origins) implements CustomPayload {
 
-    public static final PacketType<SyncOriginRegistryS2CPacket> TYPE = PacketType.create(
-        Origins.identifier("s2c/sync_origin_registry"), SyncOriginRegistryS2CPacket::read
-    );
+    public static final Id<SyncOriginRegistryS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_origin_registry"));
+    public static final PacketCodec<RegistryByteBuf, SyncOriginRegistryS2CPacket> PACKET_CODEC = PacketCodec.of(SyncOriginRegistryS2CPacket::write, SyncOriginRegistryS2CPacket::read);
 
-    private static SyncOriginRegistryS2CPacket read(PacketByteBuf buffer) {
-        return new SyncOriginRegistryS2CPacket(buffer.readMap(PacketByteBuf::readIdentifier, Origin.DATA::read));
+    public static SyncOriginRegistryS2CPacket read(RegistryByteBuf buf) {
+        return new SyncOriginRegistryS2CPacket(buf.readMap(PacketByteBuf::readIdentifier, valueBuf -> Origin.DATA.read((RegistryByteBuf) valueBuf)));
+    }
+
+    public void write(RegistryByteBuf buf) {
+        buf.writeMap(origins, PacketByteBuf::writeIdentifier, (valueBuf, origin) -> Origin.DATA.write((RegistryByteBuf) valueBuf, origin));
     }
 
     @Override
-    public void write(PacketByteBuf buffer) {
-        buffer.writeMap(origins, PacketByteBuf::writeIdentifier, Origin.DATA::write);
-    }
-
-    @Override
-    public PacketType<?> getType() {
-        return TYPE;
+    public Id<? extends CustomPayload> getId() {
+        return PACKET_ID;
     }
 
 }

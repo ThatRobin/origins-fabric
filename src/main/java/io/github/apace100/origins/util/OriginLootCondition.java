@@ -1,6 +1,7 @@
 package io.github.apace100.origins.util;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.Origin;
@@ -18,7 +19,7 @@ import java.util.Optional;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public class OriginLootCondition implements LootCondition {
 
-    public static final Codec<OriginLootCondition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final MapCodec<OriginLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Identifier.CODEC.fieldOf("origin").forGetter(OriginLootCondition::getOrigin),
         Identifier.CODEC.optionalFieldOf("layer").forGetter(OriginLootCondition::getLayer)
     ).apply(instance, OriginLootCondition::new));

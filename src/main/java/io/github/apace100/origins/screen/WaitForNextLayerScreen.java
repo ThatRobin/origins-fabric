@@ -10,15 +10,16 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class WaitForNextLayerScreen extends Screen {
 
-    private final ArrayList<OriginLayer> layerList;
+    private final List<OriginLayer> layerList;
     private final int currentLayerIndex;
     private final boolean showDirtBackground;
     private final int maxSelection;
 
-    protected WaitForNextLayerScreen(ArrayList<OriginLayer> layerList, int currentLayerIndex, boolean showDirtBackground) {
+    protected WaitForNextLayerScreen(List<OriginLayer> layerList, int currentLayerIndex, boolean showDirtBackground) {
         super(Text.empty());
         this.layerList = layerList;
         this.currentLayerIndex = currentLayerIndex;
@@ -65,7 +66,7 @@ public class WaitForNextLayerScreen extends Screen {
     @Override
     public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
         if (showDirtBackground) {
-            super.renderBackgroundTexture(context);
+            super.renderDarkening(context);
         } else {
             super.renderBackground(context, mouseX, mouseY, delta);
         }

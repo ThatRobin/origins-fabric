@@ -3,7 +3,6 @@ package io.github.apace100.origins.origin;
 import carpet.patches.EntityPlayerMPFake;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import dev.onyxstudios.cca.api.v3.component.ComponentProvider;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
@@ -24,6 +23,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.Nullable;
+import org.ladysnake.cca.api.v3.component.ComponentProvider;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -306,7 +306,7 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
 
     @Override
     public Identifier getFabricId() {
-        return new Identifier(Origins.MODID, "origin_layers");
+        return Identifier.of(Origins.MODID, "origin_layers");
     }
 
     @Override

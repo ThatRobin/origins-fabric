@@ -90,7 +90,7 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 
 	@Override
 	public Identifier getFabricId() {
-		return new Identifier(Origins.MODID, "origins");
+		return Identifier.of(Origins.MODID, "origins");
 	}
 
 	@Override

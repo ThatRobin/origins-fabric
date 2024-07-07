@@ -1,7 +1,5 @@
 package io.github.apace100.origins.component;
 
-import dev.onyxstudios.cca.api.v3.component.sync.AutoSyncedComponent;
-import dev.onyxstudios.cca.api.v3.component.tick.CommonTickingComponent;
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.power.ModifyPlayerSpawnPower;
 import io.github.apace100.apoli.power.Power;
@@ -14,6 +12,8 @@ import io.github.apace100.origins.power.OriginsCallbackPower;
 import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
+import org.ladysnake.cca.api.v3.component.sync.AutoSyncedComponent;
+import org.ladysnake.cca.api.v3.component.tick.CommonTickingComponent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,9 +35,6 @@ public interface OriginComponent extends AutoSyncedComponent, CommonTickingCompo
 	void removeLayer(OriginLayer layer);
 	void setOrigin(OriginLayer layer, Origin origin);
 	void sync();
-
-	@Deprecated(forRemoval = true)
-	void onPowersRead();
 
 	static void sync(PlayerEntity player) {
 		ModComponents.ORIGIN.sync(player);
