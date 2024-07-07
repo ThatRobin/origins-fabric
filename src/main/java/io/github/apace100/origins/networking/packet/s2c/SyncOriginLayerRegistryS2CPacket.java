@@ -17,11 +17,11 @@ public record SyncOriginLayerRegistryS2CPacket(Map<Identifier, OriginLayer> laye
     public static final PacketCodec<RegistryByteBuf, SyncOriginLayerRegistryS2CPacket> PACKET_CODEC = PacketCodec.of(SyncOriginLayerRegistryS2CPacket::write, SyncOriginLayerRegistryS2CPacket::read);
 
     public static SyncOriginLayerRegistryS2CPacket read(RegistryByteBuf buffer) {
-        return new SyncOriginLayerRegistryS2CPacket(buffer.readMap(value -> new HashMap<>(), PacketByteBuf::readIdentifier, valBuf -> OriginLayer.read((RegistryByteBuf) valBuf)));
+        return new SyncOriginLayerRegistryS2CPacket(buffer.readMap(value -> new HashMap<>(), PacketByteBuf::readIdentifier, valBuf -> OriginLayer.receive((RegistryByteBuf) valBuf)));
     }
 
     public void write(RegistryByteBuf buffer) {
-        buffer.writeMap(layers, PacketByteBuf::writeIdentifier, (valueBuffer, layer) -> layer.write((RegistryByteBuf) valueBuffer));
+        buffer.writeMap(layers, PacketByteBuf::writeIdentifier, (valueBuffer, layer) -> layer.send((RegistryByteBuf) valueBuffer));
     }
 
     @Override

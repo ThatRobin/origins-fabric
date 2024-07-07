@@ -10,6 +10,7 @@ import io.github.apace100.origins.data.OriginsDataTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -23,6 +24,8 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class OriginLayer implements Comparable<OriginLayer> {
+
+    public static final PacketCodec<RegistryByteBuf, OriginLayer> PACKET_CODEC = PacketCodec.of(OriginLayer::send, OriginLayer::receive);
 
     public static final SerializableData DATA = new SerializableData()
         .add("order", SerializableDataTypes.INT, OriginLayers.size())
@@ -374,11 +377,11 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return Integer.compare(order, o.order);
     }
 
-    public void write(RegistryByteBuf buf) {
+    public void send(RegistryByteBuf buf) {
         DATA.write(buf, toData());
     }
 
-    public static OriginLayer read(RegistryByteBuf buf) {
+    public static OriginLayer receive(RegistryByteBuf buf) {
         return fromData(DATA.read(buf));
     }
 

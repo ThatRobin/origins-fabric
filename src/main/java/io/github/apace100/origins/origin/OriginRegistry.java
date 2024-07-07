@@ -1,8 +1,12 @@
 package io.github.apace100.origins.origin;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.networking.packet.s2c.SyncOriginRegistryS2CPacket;
+import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
@@ -12,6 +16,12 @@ import java.util.Map;
 import java.util.Set;
 
 public class OriginRegistry {
+
+    public static final PacketCodec<ByteBuf, Origin> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginRegistry::get, Origin::getIdentifier);
+    public static final Codec<Origin> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
+        OriginRegistry::getResult,
+        Origin::getIdentifier
+    );
 
     private static final Map<Identifier, Origin> idToOrigin = new HashMap<>();
 
@@ -49,6 +59,12 @@ public class OriginRegistry {
 
     public static Collection<Origin> values() {
         return idToOrigin.values();
+    }
+
+    public static DataResult<Origin> getResult(Identifier id) {
+        return idToOrigin.containsKey(id)
+            ? DataResult.success(idToOrigin.get(id))
+            : DataResult.error(() -> "Could not get origin from id '" + id.toString() + "', as it was not registered!");
     }
 
     public static Origin get(Identifier id) {

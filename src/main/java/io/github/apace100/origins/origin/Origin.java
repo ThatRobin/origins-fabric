@@ -17,6 +17,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -25,6 +26,8 @@ import net.minecraft.util.Util;
 import java.util.*;
 
 public class Origin {
+
+    public static final PacketCodec<RegistryByteBuf, Origin> PACKET_CODEC = PacketCodec.of(Origin::send, Origin::receive);
 
     public static final SerializableData DATA = new SerializableData()
         .add("powers", SerializableDataTypes.IDENTIFIERS, Lists.newArrayList())
@@ -239,7 +242,7 @@ public class Origin {
 
     }
 
-    public void write(RegistryByteBuf buf) {
+    public void send(RegistryByteBuf buf) {
         buf.writeIdentifier(identifier);
         DATA.write(buf, toData());
     }
@@ -278,7 +281,7 @@ public class Origin {
 
     }
 
-    public static Origin read(RegistryByteBuf buf) {
+    public static Origin receive(RegistryByteBuf buf) {
         Identifier id = buf.readIdentifier();
         return createFromData(id, DATA.read(buf));
     }

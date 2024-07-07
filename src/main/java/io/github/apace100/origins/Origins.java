@@ -91,7 +91,9 @@ public class Origins implements ModInitializer {
 
 		ModEntities.register();
 		ModLoot.registerLootTables();
+
 		ModComponents.register();
+		ModDataComponentTypes.register();
 
 		Origin.init();
 		BadgeManager.init();

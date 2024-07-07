@@ -3,6 +3,8 @@ package io.github.apace100.origins.origin;
 import carpet.patches.EntityPlayerMPFake;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
@@ -12,11 +14,13 @@ import io.github.apace100.origins.integration.OriginDataLoadedCallback;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
 import io.github.apace100.origins.networking.packet.s2c.SyncOriginLayerRegistryS2CPacket;
 import io.github.apace100.origins.registry.ModComponents;
+import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -33,6 +37,12 @@ import java.util.stream.IntStream;
 public class OriginLayers extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
 
     public static final Identifier PHASE = Origins.identifier("phase/origin_layers");
+
+    public static final PacketCodec<ByteBuf, OriginLayer> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginLayers::getLayer, OriginLayer::getIdentifier);
+    public static final Codec<OriginLayer> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
+        OriginLayers::getLayerResult,
+        OriginLayer::getIdentifier
+    );
 
     private static final HashMap<Identifier, OriginLayer> LAYERS = new HashMap<>();
     private static final Gson GSON = new GsonBuilder()
@@ -244,6 +254,12 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
         SerializableData.CURRENT_NAMESPACE = null;
         SerializableData.CURRENT_PATH = null;
 
+    }
+
+    public static DataResult<OriginLayer> getLayerResult(Identifier id) {
+        return LAYERS.containsKey(id)
+            ? DataResult.success(LAYERS.get(id))
+            : DataResult.error(() -> "Could not get layer from id '" + id.toString() + "', as it doesn't exist!");
     }
 
     public static OriginLayer getLayer(Identifier id) {
