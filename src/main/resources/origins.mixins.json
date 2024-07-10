@@ -7,6 +7,8 @@
         "ActiveTargetGoalAccessor",
         "ArgumentTypesMixin",
         "ConduitPowerOnLandMixin",
+        "ItemMixin",
+        "ItemStackMixin",
         "LikeWaterMixin",
         "LivingEntityAccessor",
         "MobEntityAccessor",
