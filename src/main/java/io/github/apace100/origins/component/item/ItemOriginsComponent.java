@@ -22,6 +22,7 @@ import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 
 import java.util.function.Consumer;
 
@@ -59,8 +60,8 @@ public class ItemOriginsComponent implements TooltipAppender {
                 continue;
             }
 
-            OriginLayer layer = entry.layer();
-            Origin origin = entry.origin();
+            OriginLayer layer = OriginLayers.getLayer(entry.layerId());
+            Origin origin = OriginRegistry.get(entry.originId());
 
             String translationKey;
             Object[] args;
@@ -101,7 +102,7 @@ public class ItemOriginsComponent implements TooltipAppender {
                 continue;
             }
 
-            originComponent.setOrigin(entry.layer(), entry.origin());
+            originComponent.setOrigin(OriginLayers.getLayer(entry.layerId()), OriginRegistry.get(entry.originId()));
             assignedOrigin = true;
 
         }
@@ -125,22 +126,29 @@ public class ItemOriginsComponent implements TooltipAppender {
 
     }
 
-    public record Entry(OriginLayer layer, Origin origin) {
+    public record Entry(Identifier layerId, Identifier originId) {
 
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            OriginLayers.DISPATCH_CODEC.fieldOf("layer").forGetter(Entry::layer),
-            OriginRegistry.DISPATCH_CODEC.optionalFieldOf("origin", Origin.EMPTY).forGetter(Entry::origin)
+            OriginLayers.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
+            OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getIdentifier()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
 
         public static final PacketCodec<PacketByteBuf, Entry> PACKET_CODEC = PacketCodec.tuple(
-            OriginLayers.DISPATCH_PACKET_CODEC, Entry::layer,
-            OriginRegistry.DISPATCH_PACKET_CODEC, Entry::origin,
+            Identifier.PACKET_CODEC, Entry::layerId,
+            Identifier.PACKET_CODEC, Entry::originId,
             Entry::new
         );
 
         public boolean canSelect() {
-            return layer.isEnabled()
+
+            OriginLayer layer = OriginLayers.getNullableLayer(layerId);
+            Origin origin = OriginRegistry.getNullable(originId);
+
+            return layer != null
+                && origin != null
+                && layer.isEnabled()
                 && (layer.contains(origin) || origin.isSpecial());
+
         }
 
     }

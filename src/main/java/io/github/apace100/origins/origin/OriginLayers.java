@@ -38,6 +38,13 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
 
     public static final Identifier PHASE = Origins.identifier("phase/origin_layers");
 
+    public static final Codec<Identifier> VALIDATING_CODEC = Identifier.CODEC.comapFlatMap(
+        id -> contains(id)
+            ? DataResult.success(id)
+            : DataResult.error(() -> "Could not get layer from id '" + id + "', as it doesn't exist!"),
+        id -> id
+    );
+
     public static final PacketCodec<ByteBuf, OriginLayer> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginLayers::getLayer, OriginLayer::getIdentifier);
     public static final Codec<OriginLayer> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
         OriginLayers::getLayerResult,

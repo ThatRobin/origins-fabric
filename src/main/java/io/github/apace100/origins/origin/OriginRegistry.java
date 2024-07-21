@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,6 +17,13 @@ import java.util.Map;
 import java.util.Set;
 
 public class OriginRegistry {
+
+    public static final Codec<Identifier> VALIDATING_CODEC = Identifier.CODEC.comapFlatMap(
+        id -> contains(id)
+            ? DataResult.success(id)
+            : DataResult.error(() -> "Could not get origin from id '" + id + "', as it was not registered!"),
+        id -> id
+    );
 
     public static final PacketCodec<ByteBuf, Origin> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginRegistry::get, Origin::getIdentifier);
     public static final Codec<Origin> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
@@ -75,6 +83,11 @@ public class OriginRegistry {
 
         return idToOrigin.get(id);
 
+    }
+
+    @Nullable
+    public static Origin getNullable(Identifier originId) {
+        return idToOrigin.get(originId);
     }
 
     public static boolean contains(Identifier id) {
