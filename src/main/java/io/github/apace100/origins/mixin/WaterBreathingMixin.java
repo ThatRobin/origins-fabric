@@ -3,7 +3,7 @@ package io.github.apace100.origins.mixin;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.origins.power.WaterBreathingPower;
+import io.github.apace100.origins.power.type.WaterBreathingPowerType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -26,12 +26,12 @@ public final class WaterBreathingMixin {
         @ModifyReturnValue(method = "canBreatheInWater", at = @At("RETURN"))
         private boolean origins$breatheUnderwater(boolean original) {
             return original
-                || PowerHolderComponent.hasPower(this, WaterBreathingPower.class);
+                || PowerHolderComponent.hasPowerType(this, WaterBreathingPowerType.class);
         }
 
         @Inject(method = "baseTick", at = @At("TAIL"))
         private void origins$waterBreathingTick(CallbackInfo ci) {
-            WaterBreathingPower.tick((LivingEntity) (Object) this);
+            WaterBreathingPowerType.tick((LivingEntity) (Object) this);
         }
 
     }
@@ -45,7 +45,7 @@ public final class WaterBreathingMixin {
 
         @ModifyExpressionValue(method = "updateTurtleHelmet", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerEntity;isSubmergedIn(Lnet/minecraft/registry/tag/TagKey;)Z"))
         private boolean origins$submergedProxy(boolean original) {
-            return PowerHolderComponent.hasPower(this, WaterBreathingPower.class) != original;
+            return PowerHolderComponent.hasPowerType(this, WaterBreathingPowerType.class) != original;
         }
 
     }

@@ -1,14 +1,14 @@
 package io.github.apace100.origins.component;
 
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.ModifyPlayerSpawnPower;
 import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.type.ModifyPlayerSpawnPowerType;
+import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.origin.OriginLayers;
 import io.github.apace100.origins.origin.OriginRegistry;
-import io.github.apace100.origins.power.OriginsCallbackPower;
+import io.github.apace100.origins.power.type.OriginsCallbackPowerType;
 import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
@@ -38,27 +38,36 @@ public interface OriginComponent extends AutoSyncedComponent, CommonTickingCompo
 
 	static void sync(PlayerEntity player) {
 		ModComponents.ORIGIN.sync(player);
-		PowerHolderComponent.KEY.sync(player);
 	}
 
 	static void onChosen(PlayerEntity player, boolean hadOriginBefore) {
+
 		if(!hadOriginBefore) {
-			PowerHolderComponent.getPowers(player, ModifyPlayerSpawnPower.class).forEach(ModifyPlayerSpawnPower::teleportToModifiedSpawn);
+			PowerHolderComponent.getPowerTypes(player, ModifyPlayerSpawnPowerType.class).forEach(ModifyPlayerSpawnPowerType::teleportToModifiedSpawn);
 		}
-		PowerHolderComponent.getPowers(player, OriginsCallbackPower.class).forEach(p -> p.onChosen(hadOriginBefore));
+
+		PowerHolderComponent.getPowerTypes(player, OriginsCallbackPowerType.class).forEach(p -> p.onChosen(hadOriginBefore));
+
 	}
 
 	static void partialOnChosen(PlayerEntity player, boolean hadOriginBefore, Origin origin) {
+
 		PowerHolderComponent powerHolder = PowerHolderComponent.KEY.get(player);
-		for(PowerType<?> powerType : powerHolder.getPowersFromSource(origin.getIdentifier())) {
-			Power p = powerHolder.getPower(powerType);
-			if(p instanceof ModifyPlayerSpawnPower && !hadOriginBefore) {
-				((ModifyPlayerSpawnPower)p).teleportToModifiedSpawn();
-			} else
-			if(p instanceof OriginsCallbackPower) {
-				((OriginsCallbackPower)p).onChosen(hadOriginBefore);
+
+		for (Power power : powerHolder.getPowersFromSource(origin.getId())) {
+
+			PowerType powerType  = powerHolder.getPowerType(power);
+
+			if (powerType instanceof ModifyPlayerSpawnPowerType mps && !hadOriginBefore) {
+				mps.teleportToModifiedSpawn();
 			}
+
+			else if (powerType instanceof OriginsCallbackPowerType ocp) {
+				ocp.onChosen(hadOriginBefore);
+			}
+
 		}
+
 	}
 
 	default boolean checkAutoChoosingLayers(PlayerEntity player, boolean includeDefaults) {
@@ -93,7 +102,7 @@ public interface OriginComponent extends AutoSyncedComponent, CommonTickingCompo
 
 				if (!origins.isEmpty()) {
 
-					setOrigin(layer, origins.get(0));
+					setOrigin(layer, origins.getFirst());
 					choseOneAutomatically = true;
 
 				} else if (layer.isRandomAllowed() && !layer.getRandomOrigins(player).isEmpty()) {

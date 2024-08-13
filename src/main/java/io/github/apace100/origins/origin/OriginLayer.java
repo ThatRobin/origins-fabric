@@ -1,10 +1,11 @@
 package io.github.apace100.origins.origin;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import io.github.apace100.apoli.condition.factory.ConditionTypeFactory;
 import io.github.apace100.apoli.data.ApoliDataTypes;
-import io.github.apace100.apoli.power.factory.condition.ConditionFactory;
+import io.github.apace100.calio.data.CompoundSerializableDataType;
 import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.data.OriginsDataTypes;
 import net.minecraft.entity.Entity;
@@ -238,7 +239,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     }
 
     public boolean contains(Origin origin) {
-        return contains(origin.getIdentifier());
+        return contains(origin.getId());
     }
 
     public boolean contains(Identifier originId, PlayerEntity playerEntity) {
@@ -250,7 +251,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     }
 
     public boolean contains(Origin origin, PlayerEntity playerEntity) {
-        return contains(origin.getIdentifier(), playerEntity);
+        return contains(origin.getId(), playerEntity);
     }
 
     public boolean isRandomAllowed() {
@@ -396,72 +397,38 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
     public record GuiTitle(@Nullable Text viewOrigin, @Nullable Text chooseOrigin) {
 
-        public static final SerializableData DATA = new SerializableData()
-            .add("view_origin", SerializableDataTypes.TEXT, null)
-            .add("choose_origin", SerializableDataTypes.TEXT, null);
-
-        public SerializableData.Instance toData() {
-
-            SerializableData.Instance data = DATA.new Instance();
-
-            data.set("view_origin", viewOrigin);
-            data.set("choose_origin", chooseOrigin);
-
-            return data;
-
-        }
-
-        public static GuiTitle fromData(SerializableData.Instance data) {
-            return new GuiTitle(data.get("view_origin"), data.get("choose_origin"));
-        }
+        public static final CompoundSerializableDataType<GuiTitle> DATA_TYPE = SerializableDataType.compound(
+            new SerializableData()
+                .add("view_origin", SerializableDataTypes.TEXT, null)
+                .add("choose_origin", SerializableDataTypes.TEXT, null),
+            data -> new GuiTitle(
+                data.get("view_origin"),
+                data.get("choose_origin")
+            ),
+            (guiTitle, data) -> data
+                .set("view_origin", guiTitle.viewOrigin())
+                .set("choose_origin", guiTitle.viewOrigin)
+        );
 
     }
 
-    public record ConditionedOrigin(ConditionFactory<Entity>.Instance condition, List<Identifier> origins) {
+    public record ConditionedOrigin(@Nullable ConditionTypeFactory<Entity>.Instance condition, List<Identifier> origins) {
 
-        public static final SerializableData DATA = new SerializableData()
-            .add("condition", ApoliDataTypes.ENTITY_CONDITION, null)
-            .add("origins", SerializableDataTypes.IDENTIFIERS);
+        public static final CompoundSerializableDataType<ConditionedOrigin> DATA_TYPE = SerializableDataType.compound(
+            new SerializableData()
+                .add("condition", ApoliDataTypes.ENTITY_CONDITION, null)
+                .add("origins", SerializableDataTypes.IDENTIFIERS),
+            data -> new ConditionedOrigin(
+                data.get("condition"),
+                data.get("origins")
+            ),
+            (conditionedOrigin, data) -> data
+                .set("condition", conditionedOrigin.condition())
+                .set("origins", conditionedOrigin.origins())
+        );
 
         public boolean isConditionFulfilled(PlayerEntity playerEntity) {
             return condition == null || condition.test(playerEntity);
-        }
-
-        public SerializableData.Instance toData() {
-
-            SerializableData.Instance data = DATA.new Instance();
-
-            data.set("condition", condition);
-            data.set("origins", origins);
-
-            return data;
-
-        }
-
-        public static ConditionedOrigin fromData(SerializableData.Instance data) {
-            return new ConditionedOrigin(data.get("condition"), data.get("origins"));
-        }
-
-        @Deprecated
-        public ConditionFactory<Entity>.Instance getCondition() {
-            return condition;
-        }
-
-        @Deprecated
-        public List<Identifier> getOrigins() {
-            return origins;
-        }
-
-        public void write(RegistryByteBuf buf) {
-            OriginsDataTypes.CONDITIONED_ORIGIN.send(buf, this);
-        }
-
-        public static ConditionedOrigin read(RegistryByteBuf buf) {
-            return OriginsDataTypes.ORIGIN_OR_CONDITIONED_ORIGIN.receive(buf);
-        }
-
-        public static ConditionedOrigin read(JsonElement element) {
-            return OriginsDataTypes.ORIGIN_OR_CONDITIONED_ORIGIN.read(element);
         }
 
     }

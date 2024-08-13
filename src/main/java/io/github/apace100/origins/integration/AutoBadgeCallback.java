@@ -1,7 +1,7 @@
 package io.github.apace100.origins.integration;
 
 import io.github.apace100.apoli.integration.PostPowerReloadCallback;
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.Power;
 import io.github.apace100.origins.badge.Badge;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
@@ -19,13 +19,13 @@ import java.util.List;
 public interface AutoBadgeCallback {
 
     Event<AutoBadgeCallback> EVENT = EventFactory.createArrayBacked(AutoBadgeCallback.class,
-        (listeners) -> (powerId, powerType, badgeList) -> {
+        (listeners) -> (powerId, power, badgeList) -> {
             for(AutoBadgeCallback listener : listeners) {
-                listener.createAutoBadge(powerId, powerType, badgeList);
+                listener.createAutoBadge(powerId, power, badgeList);
             }
         }
     );
 
-    void createAutoBadge(Identifier powerId, PowerType<?> powerType, List<Badge> badgeList);
+    void createAutoBadge(Identifier powerId, Power power, List<Badge> badgeList);
 
 }

@@ -2,8 +2,9 @@ package io.github.apace100.origins.origin;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import io.github.apace100.apoli.Apoli;
-import io.github.apace100.apoli.power.PowerTypes;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
+import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
@@ -13,9 +14,12 @@ import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -27,18 +31,21 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 		.setPrettyPrinting()
 		.create();
 
+	private static final Map<Identifier, Integer> LOADING_PRIORITIES = new HashMap<>();
+
 	public OriginManager() {
 		super(GSON, "origins", ResourceType.SERVER_DATA);
-		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerTypes.PHASE, PHASE);
+		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerManager.PHASE, PHASE);
 		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(PHASE, (player, joined) -> OriginRegistry.send(player));
 	}
 
 	@Override
 	protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
 
+		LOADING_PRIORITIES.clear();
 		OriginRegistry.reset();
-		AtomicBoolean hasConfigChanged = new AtomicBoolean(false);
 
+		AtomicBoolean hasConfigChanged = new AtomicBoolean(false);
 		prepared.forEach((packName, id, jsonElement) -> {
 
 			try {
@@ -46,35 +53,49 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 				SerializableData.CURRENT_NAMESPACE = id.getNamespace();
 				SerializableData.CURRENT_PATH = id.getPath();
 
-				Origin origin = Origin.fromJson(id, jsonElement.getAsJsonObject());
-				int loadingPriority = origin.getLoadingPriority();
+				if (!(jsonElement instanceof JsonObject jsonObject)) {
+					throw new JsonSyntaxException("Expected a JSON object");
+				}
+
+				Origin origin = Origin.fromJson(id, jsonObject);
+
+				int prevLoadingPriority = LOADING_PRIORITIES.computeIfAbsent(id, k -> 0);
+				int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
 
 				if (!OriginRegistry.contains(id)) {
 					OriginRegistry.register(id, origin);
-				} else if (OriginRegistry.get(id).getLoadingPriority() < loadingPriority) {
-					Origins.LOGGER.warn("Overriding origin \"{}\" (with prev. loading priority of {}) with a higher loading priority of {} from data pack [{}]!", id, OriginRegistry.get(id).getLoadingPriority(), loadingPriority, packName);
-					OriginRegistry.update(id, origin);
+					LOADING_PRIORITIES.put(id, currLoadingPriority);
 				}
 
-			} catch (Exception e) {
+				else if (prevLoadingPriority < currLoadingPriority) {
+
+					Origins.LOGGER.warn("Overriding origin \"{}\" (with prev. loading priority of {}) with a higher loading priority of {} from data pack [{}]!", id, prevLoadingPriority, currLoadingPriority, packName);
+
+					OriginRegistry.update(id, origin);
+					LOADING_PRIORITIES.put(id, currLoadingPriority);
+
+				}
+
+				else  {
+
+					origin = OriginRegistry.get(id);
+					hasConfigChanged.set(hasConfigChanged.get() | Origins.config.addToConfig(origin));
+
+					if (Origins.config.isOriginDisabled(id)) {
+						OriginRegistry.remove(id);
+					}
+
+					else {
+						origin.validate();
+					}
+
+				}
+
+			}
+
+			catch (Exception e) {
 				Origins.LOGGER.error("There was a problem reading origin file \"{}\" (skipping): {}", id, e.getMessage());
 			}
-
-			if (!OriginRegistry.contains(id)) {
-				return;
-			}
-
-			Origin origin = OriginRegistry.get(id);
-			hasConfigChanged.set(hasConfigChanged.get() | Origins.config.addToConfig(origin));
-
-			if (Origins.config.isOriginDisabled(id)) {
-				OriginRegistry.remove(id);
-				return;
-			}
-
-			origin
-				.getPowerTypes()
-				.removeIf(pt -> Origins.config.isPowerDisabled(id, pt.getIdentifier()));
 
 		});
 
@@ -83,6 +104,8 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 			Origins.serializeConfig();
 		}
 
+		LOADING_PRIORITIES.clear();
+
 		SerializableData.CURRENT_NAMESPACE = null;
 		SerializableData.CURRENT_PATH = null;
 
@@ -90,12 +113,12 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 
 	@Override
 	public Identifier getFabricId() {
-		return Identifier.of(Origins.MODID, "origins");
+		return Origins.identifier("origins");
 	}
 
 	@Override
 	public Collection<Identifier> getFabricDependencies() {
-		return Set.of(Apoli.identifier("powers"));
+		return Set.of(PowerManager.ID);
 	}
 
 }

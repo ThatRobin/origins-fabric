@@ -4,6 +4,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.apace100.origins.Origins;
+import io.github.apace100.origins.command.argument.LayerArgumentType;
+import io.github.apace100.origins.command.argument.OriginArgumentType;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
 import io.github.apace100.origins.origin.Origin;
@@ -88,7 +90,7 @@ public class OriginCommand {
 		
 		int processedTargets = 0;
 		
-		if (origin.equals(Origin.EMPTY) || originLayer.getOrigins().contains(origin.getIdentifier())) {
+		if (origin.equals(Origin.EMPTY) || originLayer.getOrigins().contains(origin.getId())) {
 			
 			for (ServerPlayerEntity target : targets) {
 				
@@ -96,10 +98,9 @@ public class OriginCommand {
 				boolean hadOriginBefore = originComponent.hadOriginBefore();
 				
 				originComponent.setOrigin(originLayer, origin);
-				originComponent.sync();
+				ModComponents.ORIGIN.sync(target);
 				
 				OriginComponent.partialOnChosen(target, hadOriginBefore, origin);
-				
 				processedTargets++;
 				
 			}
@@ -112,7 +113,7 @@ public class OriginCommand {
 			
 		}
 		
-		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getIdentifier(), originLayer.getIdentifier()));
+		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getIdentifier()));
 		
 		return processedTargets;
 		
@@ -133,7 +134,7 @@ public class OriginCommand {
 		
 		int processedTargets = 0;
 		
-		if (origin.equals(Origin.EMPTY) || originLayer.getOrigins().contains(origin.getIdentifier())) {
+		if (origin.equals(Origin.EMPTY) || originLayer.getOrigins().contains(origin.getId())) {
 			
 			for (ServerPlayerEntity target : targets) {
 				OriginComponent originComponent = ModComponents.ORIGIN.get(target);
@@ -149,7 +150,7 @@ public class OriginCommand {
 			
 		}
 		
-		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getIdentifier(), originLayer.getIdentifier()));
+		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getIdentifier()));
 		
 		return processedTargets;
 		
@@ -170,7 +171,7 @@ public class OriginCommand {
 		OriginLayer originLayer = LayerArgumentType.getLayer(commandContext, "layer");
 		Origin origin = originComponent.getOrigin(originLayer);
 		
-		serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.get.result", target.getDisplayName().getString(), originLayer.getName(), origin.getName(), origin.getIdentifier()), true);
+		serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.get.result", target.getDisplayName().getString(), originLayer.getName(), origin.getName(), origin.getId()), true);
 		
 		return 1;
 		
@@ -336,7 +337,7 @@ public class OriginCommand {
 		Origins.LOGGER.info(
 			"Player {} was randomly assigned the origin {} for layer {}",
 			target.getDisplayName().getString(),
-			origin.getIdentifier().toString(),
+			origin.getId().toString(),
 			originLayer.getIdentifier().toString()
 		);
 

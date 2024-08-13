@@ -168,7 +168,7 @@ public class ModPacketsC2S {
     }
 
     private static void confirmOrigin(ServerPlayerEntity player, OriginLayer layer, Origin origin) {
-        ServerPlayNetworking.send(player, new ConfirmOriginS2CPacket(layer.getIdentifier(), origin.getIdentifier()));
+        ServerPlayNetworking.send(player, new ConfirmOriginS2CPacket(layer.getIdentifier(), origin.getId()));
     }
 
 }

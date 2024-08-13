@@ -130,7 +130,7 @@ public class ItemOriginsComponent implements TooltipAppender {
 
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             OriginLayers.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
-            OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getIdentifier()).forGetter(Entry::originId)
+            OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
 
         public static final PacketCodec<PacketByteBuf, Entry> PACKET_CODEC = PacketCodec.tuple(

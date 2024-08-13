@@ -3,7 +3,7 @@ package io.github.apace100.origins.mixin;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.authlib.GameProfile;
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.origins.power.WaterVisionPower;
+import io.github.apace100.origins.power.type.WaterVisionPowerType;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
@@ -22,7 +22,7 @@ public abstract class WaterVisionMixin extends AbstractClientPlayerEntity {
 
     @ModifyExpressionValue(method = "getUnderwaterVisibility", at = @At(value = "FIELD", target = "Lnet/minecraft/client/network/ClientPlayerEntity;underwaterVisibilityTicks:I", ordinal = 0))
     private int origins$ignoreVisibilityDelay(int original) {
-        return !PowerHolderComponent.hasPower(this, WaterVisionPower.class)
+        return !PowerHolderComponent.hasPowerType(this, WaterVisionPowerType.class)
             ? original
             : 1000;
     }

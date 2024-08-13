@@ -3,18 +3,18 @@ package io.github.apace100.origins;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypes;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.calio.util.IdentifierAlias;
 import io.github.apace100.origins.badge.BadgeManager;
 import io.github.apace100.origins.command.OriginCommand;
+import io.github.apace100.origins.condition.factory.entity.OriginsEntityConditions;
 import io.github.apace100.origins.networking.ModPackets;
 import io.github.apace100.origins.networking.ModPacketsC2S;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayers;
 import io.github.apace100.origins.origin.OriginManager;
-import io.github.apace100.origins.power.OriginsEntityConditions;
-import io.github.apace100.origins.power.OriginsPowerTypes;
+import io.github.apace100.origins.power.factory.OriginsPowerTypes;
 import io.github.apace100.origins.registry.*;
 import io.github.apace100.origins.util.ChoseOriginCriterion;
 import io.github.apace100.origins.util.OriginLootCondition;
@@ -44,9 +44,10 @@ import org.apache.logging.log4j.Logger;
 public class Origins implements ModInitializer {
 
 	public static final String MODID = "origins";
+	public static final Logger LOGGER = LogManager.getLogger(Origins.class);
+
 	public static String VERSION = "";
 	public static int[] SEMVER;
-	public static final Logger LOGGER = LogManager.getLogger(Origins.class);
 
 	public static ServerConfig config;
 	private static ConfigSerializer<ServerConfig> configSerializer;
@@ -102,7 +103,7 @@ public class Origins implements ModInitializer {
 		OriginLayers originLayerManager = new OriginLayers();
 		IdentifiableResourceReloadListener badgeManager = BadgeManager.REGISTRY.getLoader();
 
-		PowerTypes.DEPENDENCIES.add(badgeManager.getFabricId());
+		PowerManager.DEPENDENCIES.add(badgeManager.getFabricId());
 
 		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(originManager);
 		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(originLayerManager);
@@ -163,7 +164,7 @@ public class Origins implements ModInitializer {
 
 		public boolean addToConfig(Origin origin) {
 			boolean changed = false;
-			String originIdString = origin.getIdentifier().toString();
+			String originIdString = origin.getId().toString();
 			JsonObject originObj;
 			if(!origins.has(originIdString) || !(origins.get(originIdString) instanceof JsonObject)) {
 				originObj = new JsonObject();
@@ -176,8 +177,8 @@ public class Origins implements ModInitializer {
 				originObj.addProperty("enabled", Boolean.TRUE);
 				changed = true;
 			}
-			for(PowerType<?> power : origin.getPowerTypes()) {
-				String powerIdString = power.getIdentifier().toString();
+			for(Power power : origin.getPowers()) {
+				String powerIdString = power.getId().toString();
 				if(!originObj.has(powerIdString) || !(originObj.get(powerIdString) instanceof JsonPrimitive)) {
 					originObj.addProperty(powerIdString, Boolean.TRUE);
 					changed = true;

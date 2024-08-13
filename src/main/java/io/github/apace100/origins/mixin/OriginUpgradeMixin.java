@@ -49,7 +49,7 @@ public abstract class OriginUpgradeMixin {
                 }
 
             } catch (Exception e) {
-                Origins.LOGGER.error("Could not perform Origins upgrade from \"{}\" to \"{}\", as the upgrade origin did not exist!", origin.getIdentifier(), originUpgrade.upgradeToOrigin().toString());
+                Origins.LOGGER.error("Could not perform Origins upgrade from \"{}\" to \"{}\", as the upgrade origin did not exist!", origin.getId(), originUpgrade.upgradeToOrigin().toString());
             }
         }));
 

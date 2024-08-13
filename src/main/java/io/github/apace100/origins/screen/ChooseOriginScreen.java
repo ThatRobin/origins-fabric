@@ -3,7 +3,10 @@ package io.github.apace100.origins.screen;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.networking.packet.c2s.ChooseOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseRandomOriginC2SPacket;
-import io.github.apace100.origins.origin.*;
+import io.github.apace100.origins.origin.Impact;
+import io.github.apace100.origins.origin.Origin;
+import io.github.apace100.origins.origin.OriginLayer;
+import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModItems;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -98,7 +101,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 			Text.translatable(Origins.MODID + ".gui.select"),
 			button -> {
 
-				Identifier originId = super.getCurrentOrigin().getIdentifier();
+				Identifier originId = super.getCurrentOrigin().getId();
 				Identifier layerId = getCurrentLayer().getIdentifier();
 
 				if (currentOriginIndex == originSelection.size()) {
@@ -176,7 +179,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 	private void initRandomOrigin() {
 
-		this.randomOrigin = new Origin(Origins.identifier("random"), new ItemStack(ModItems.ORB_OF_ORIGIN), Impact.NONE, -1, Integer.MAX_VALUE);
+		this.randomOrigin = Origin.special(Origins.identifier("random"), ModItems.ORB_OF_ORIGIN.getDefaultStack(), Impact.NONE, -1);
 
 		MutableText randomOriginText = Text.of("").copy();
 		List<Identifier> randoms = layerList.get(currentLayerIndex).getRandomOrigins(MinecraftClient.getInstance().player);

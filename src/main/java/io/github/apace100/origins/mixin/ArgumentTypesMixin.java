@@ -2,8 +2,8 @@ package io.github.apace100.origins.mixin;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import io.github.apace100.origins.Origins;
-import io.github.apace100.origins.command.LayerArgumentType;
-import io.github.apace100.origins.command.OriginArgumentType;
+import io.github.apace100.origins.command.argument.LayerArgumentType;
+import io.github.apace100.origins.command.argument.OriginArgumentType;
 import net.minecraft.command.argument.ArgumentTypes;
 import net.minecraft.command.argument.serialize.ArgumentSerializer;
 import net.minecraft.command.argument.serialize.ConstantArgumentSerializer;

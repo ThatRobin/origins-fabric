@@ -1,6 +1,8 @@
 package io.github.apace100.origins.util;
 
-import io.github.apace100.apoli.power.*;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
+import io.github.apace100.apoli.power.type.Active;
 import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
@@ -19,7 +21,7 @@ public class PowerKeyManager {
 
     private static String getKeyFromPower(Identifier powerId) {
 
-        PowerType<?> power = PowerTypeRegistry.getNullable(powerId);
+        Power power = PowerManager.getOptional(powerId).orElse(null);
         if (power == null || !(power.create(null) instanceof Active activePower)) {
             return "";
         }

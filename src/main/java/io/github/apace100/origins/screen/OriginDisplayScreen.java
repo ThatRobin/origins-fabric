@@ -1,8 +1,8 @@
 package io.github.apace100.origins.screen;
 
-import io.github.apace100.apoli.power.MultiplePowerType;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
+import io.github.apace100.apoli.power.MultiplePower;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.apoli.screen.widget.ScrollingTextWidget;
 import io.github.apace100.apoli.util.TextAlignment;
 import io.github.apace100.origins.Origins;
@@ -366,7 +366,7 @@ public class OriginDisplayScreen extends Screen {
 
         } else {
 
-            for (PowerType<?> power : origin.getPowerTypes()) {
+            for (Power power : origin.getPowers()) {
 
                 if (power.isHidden()) {
                     continue;
@@ -393,9 +393,9 @@ public class OriginDisplayScreen extends Screen {
                 int badgeOffsetX = 0;
                 int badgeOffsetY = 0;
 
-                for (PowerType<?> subOrSelfPower : this.getSubPowersOrSelf(power, BadgeManager::hasPowerBadges)) {
+                for (Power subOrSelfPower : this.getSubPowersOrSelf(power, BadgeManager::hasPowerBadges)) {
 
-                    for (Badge badge : BadgeManager.getPowerBadges(subOrSelfPower.getIdentifier())) {
+                    for (Badge badge : BadgeManager.getPowerBadges(subOrSelfPower.getId())) {
 
                         int badgeX = badgeStartX + 10 * badgeOffsetX;
                         int badgeY = (y - 1) + 10 * badgeOffsetY;
@@ -447,21 +447,18 @@ public class OriginDisplayScreen extends Screen {
 
     }
 
-    protected final List<PowerType<?>> getSubPowersOrSelf(PowerType<?> powerType, Predicate<PowerType<?>> selfPredicate) {
+    protected final List<Power> getSubPowersOrSelf(Power power, Predicate<Power> selfPredicate) {
 
-        if (!(powerType instanceof MultiplePowerType<?> multiplePowerType) || selfPredicate.test(multiplePowerType)) {
-            return List.of(powerType);
+        if (!(power instanceof MultiplePower multiplePower) || selfPredicate.test(multiplePower)) {
+            return List.of(power);
         }
 
-        List<PowerType<?>> subPowers = new LinkedList<>();
-        for (Identifier subPowerTypeId : multiplePowerType.getSubPowers()) {
+        List<Power> subPowers = new LinkedList<>();
 
-            PowerType<?> subPowerType = PowerTypeRegistry.getNullable(subPowerTypeId);
-
-            if (subPowerType != null) {
-                subPowers.add(subPowerType);
-            }
-
+        for (Identifier subPowerId : multiplePower.getSubPowers()) {
+            PowerManager
+                .getOptional(subPowerId)
+                .ifPresent(subPowers::add);
         }
 
         return subPowers;
@@ -470,21 +467,21 @@ public class OriginDisplayScreen extends Screen {
 
     protected class RenderedBadge {
 
-        private final PowerType<?> powerType;
+        private final Power power;
         private final Badge badge;
 
         private final int x;
         private final int y;
 
-        public RenderedBadge(PowerType<?> powerType, Badge badge, int x, int y) {
-            this.powerType = powerType;
+        public RenderedBadge(Power power, Badge badge, int x, int y) {
+            this.power = power;
             this.badge = badge;
             this.x = x;
             this.y = y;
         }
 
         public List<TooltipComponent> getTooltipComponents(TextRenderer textRenderer, int widthLimit) {
-            return badge.getTooltipComponents(powerType, widthLimit, OriginDisplayScreen.this.time, textRenderer);
+            return badge.getTooltipComponents(power, widthLimit, OriginDisplayScreen.this.time, textRenderer);
         }
 
         public boolean hasTooltip() {

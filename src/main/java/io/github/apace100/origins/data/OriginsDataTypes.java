@@ -1,9 +1,10 @@
 package io.github.apace100.origins.data;
 
 import com.google.common.collect.Lists;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSyntaxException;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
+import io.github.apace100.calio.codec.StrictCodec;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.origin.Impact;
@@ -17,52 +18,50 @@ public final class OriginsDataTypes {
 
     public static final SerializableDataType<Impact> IMPACT = SerializableDataType.enumValue(Impact.class);
 
-    public static final SerializableDataType<OriginUpgrade> UPGRADE = SerializableDataType.compound(
-        OriginUpgrade.class,
-        OriginUpgrade.DATA,
-        OriginUpgrade::fromData,
-        (serializableData, originUpgrade) -> originUpgrade.toData()
-    );
+    @Deprecated(forRemoval = true)
+    public static final SerializableDataType<OriginUpgrade> UPGRADE = OriginUpgrade.DATA_TYPE;
 
-    public static final SerializableDataType<List<OriginUpgrade>> UPGRADES = SerializableDataType.list(UPGRADE);
+    @Deprecated(forRemoval = true)
+    public static final SerializableDataType<List<OriginUpgrade>> UPGRADES = UPGRADE.listOf();
 
-    public static final SerializableDataType<OriginLayer.ConditionedOrigin> CONDITIONED_ORIGIN = SerializableDataType.compound(
-        OriginLayer.ConditionedOrigin.class,
-        OriginLayer.ConditionedOrigin.DATA,
-        OriginLayer.ConditionedOrigin::fromData,
-        (serializableData, conditionedOrigin) -> conditionedOrigin.toData()
-    );
+    public static final SerializableDataType<OriginLayer.ConditionedOrigin> CONDITIONED_ORIGIN = OriginLayer.ConditionedOrigin.DATA_TYPE;
 
-    public static final SerializableDataType<List<OriginLayer.ConditionedOrigin>> CONDITIONED_ORIGINS = SerializableDataType.list(CONDITIONED_ORIGIN);
+    public static final SerializableDataType<List<OriginLayer.ConditionedOrigin>> CONDITIONED_ORIGINS = CONDITIONED_ORIGIN.listOf();
 
-    public static final SerializableDataType<OriginLayer.ConditionedOrigin> ORIGIN_OR_CONDITIONED_ORIGIN = new SerializableDataType<>(
-        OriginLayer.ConditionedOrigin.class,
-        CONDITIONED_ORIGIN::send,
-        CONDITIONED_ORIGIN::receive,
-        jsonElement -> {
+    public static final SerializableDataType<OriginLayer.ConditionedOrigin> ORIGIN_OR_CONDITIONED_ORIGIN = SerializableDataType.of(
+        new StrictCodec<>() {
 
-            if (jsonElement instanceof JsonObject jsonObject) {
-                return CONDITIONED_ORIGIN.read(jsonObject);
+            @Override
+            public <T> Pair<OriginLayer.ConditionedOrigin, T> strictDecode(DynamicOps<T> ops, T input) {
+
+                DataResult<String> inputString = ops.getStringValue(input);
+
+                if (inputString.isSuccess()) {
+
+                    Identifier originId = SerializableDataTypes.IDENTIFIER.strictParse(ops, ops.createString(inputString.getOrThrow()));
+                    OriginLayer.ConditionedOrigin conditionedOrigin = new OriginLayer.ConditionedOrigin(null, Lists.newArrayList(originId));
+
+                    return new Pair<>(conditionedOrigin, input);
+
+                }
+
+                else {
+                    return CONDITIONED_ORIGIN.strictDecode(ops, input);
+                }
+
             }
 
-            if (!(jsonElement instanceof JsonPrimitive jsonPrimitive) || !jsonPrimitive.isString()) {
-                throw new JsonSyntaxException("Expected a JSON object or string.");
+            @Override
+            public <T> T strictEncode(OriginLayer.ConditionedOrigin input, DynamicOps<T> ops, T prefix) {
+                return CONDITIONED_ORIGIN.strictEncode(input, ops, prefix);
             }
-
-            Identifier originId = SerializableDataTypes.IDENTIFIER.read(jsonPrimitive);
-            return new OriginLayer.ConditionedOrigin(null, Lists.newArrayList(originId));
 
         },
-        CONDITIONED_ORIGIN::write
+        CONDITIONED_ORIGIN.packetCodec()
     );
 
-    public static final SerializableDataType<List<OriginLayer.ConditionedOrigin>> ORIGINS_OR_CONDITIONED_ORIGINS = SerializableDataType.list(ORIGIN_OR_CONDITIONED_ORIGIN);
+    public static final SerializableDataType<List<OriginLayer.ConditionedOrigin>> ORIGINS_OR_CONDITIONED_ORIGINS = ORIGIN_OR_CONDITIONED_ORIGIN.listOf();
 
-    public static final SerializableDataType<OriginLayer.GuiTitle> GUI_TITLE = SerializableDataType.compound(
-        OriginLayer.GuiTitle.class,
-        OriginLayer.GuiTitle.DATA,
-        OriginLayer.GuiTitle::fromData,
-        (serializableData, guiTitle) -> guiTitle.toData()
-    );
+    public static final SerializableDataType<OriginLayer.GuiTitle> GUI_TITLE = OriginLayer.GuiTitle.DATA_TYPE;
 
 }

@@ -4,18 +4,17 @@ import com.google.gson.*;
 import io.github.apace100.apoli.integration.PostPowerLoadCallback;
 import io.github.apace100.apoli.integration.PowerOverrideCallback;
 import io.github.apace100.apoli.integration.PrePowerReloadCallback;
-import io.github.apace100.apoli.power.*;
+import io.github.apace100.apoli.power.MultiplePower;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
+import io.github.apace100.apoli.power.type.*;
 import io.github.apace100.calio.registry.DataObjectRegistry;
 import io.github.apace100.calio.util.DynamicIdentifier;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.integration.AutoBadgeCallback;
-import io.github.apace100.origins.networking.ModPackets;
 import io.github.apace100.origins.networking.packet.s2c.SyncBadgeRegistryS2CPacket;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeEntry;
@@ -53,11 +52,11 @@ public final class BadgeManager {
         register(BadgeFactories.KEYBIND);
         //register callbacks
         PrePowerReloadCallback.EVENT.register(BadgeManager::clear);
-        PowerTypes.registerAdditionalData("badges", BadgeManager::readCustomBadges);
+        PowerManager.registerAdditionalData("badges", BadgeManager::readCustomBadges);
         PowerOverrideCallback.EVENT.register(BADGES::remove);
         PostPowerLoadCallback.EVENT.register(BadgeManager::readAutoBadges);
         AutoBadgeCallback.EVENT.register(BadgeManager::createAutoBadges);
-        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerTypes.PHASE, PHASE);
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerManager.PHASE, PHASE);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(PHASE, (player, joined) -> sync(player));
     }
 
@@ -89,17 +88,17 @@ public final class BadgeManager {
         return BADGES.containsKey(powerId);
     }
 
-    public static boolean hasPowerBadges(PowerType<?> powerType) {
-        return hasPowerBadges(powerType.getIdentifier());
+    public static boolean hasPowerBadges(Power power) {
+        return hasPowerBadges(power.getId());
     }
 
     public static void clear() {
         BADGES.clear();
     }
 
-    public static void readCustomBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonElement data, PowerType<?> powerType) {
+    public static void readCustomBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonElement data, Power power) {
 
-        if (powerType.isHidden() || isSubPower) {
+        if (power.isHidden() || isSubPower) {
             return;
         }
 
@@ -118,8 +117,14 @@ public final class BadgeManager {
                 }
 
                 else if (badgeJson instanceof JsonPrimitive badgePrimitive) {
+
                     Identifier badgeId = DynamicIdentifier.of(badgePrimitive);
                     badge = REGISTRY.get(badgeId);
+
+                    if (badge == null) {
+                        throw new IllegalArgumentException("Badge \"" + badgeId + "\" is undefined");
+                    }
+
                 }
 
                 else {
@@ -146,23 +151,23 @@ public final class BadgeManager {
      *      <li>The power is not manually hidden.</li>
      *  </ol>
      */
-    public static void readAutoBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonObject json, PowerType<?> powerType) {
+    public static void readAutoBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonObject json, Power power) {
 
-        if (!hasPowerBadges(powerId) && !(powerType instanceof MultiplePowerType<?>) && (isSubPower || !powerType.isHidden())) {
+        if (!hasPowerBadges(powerId) && !(power instanceof MultiplePower) && (isSubPower || !power.isHidden())) {
             AutoBadgeCallback.EVENT
                 .invoker()
-                .createAutoBadge(powerId, powerType, BADGES.computeIfAbsent(powerId, id -> new LinkedList<>()));
+                .createAutoBadge(powerId, power, BADGES.computeIfAbsent(powerId, id -> new LinkedList<>()));
         }
 
     }
 
-    public static void createAutoBadges(Identifier powerId, PowerType<?> powerType, List<Badge> badgeList) {
+    public static void createAutoBadges(Identifier powerId, Power power, List<Badge> badgeList) {
 
-        Power power = powerType.create(null);
+        PowerType powerType = power.create(null);
 
-        if (power instanceof Active active) {
+        if (powerType instanceof Active active) {
 
-            boolean toggle = active instanceof TogglePower || active instanceof ToggleNightVisionPower;
+            boolean toggle = active instanceof TogglePowerType || active instanceof ToggleNightVisionPowerType;
             Identifier autoBadgeId = toggle ? TOGGLE_BADGE_ID : ACTIVE_BADGE_ID;
 
             if (REGISTRY.containsId(autoBadgeId)) {
@@ -176,9 +181,9 @@ public final class BadgeManager {
 
             }
 
-        } else if (power instanceof RecipePower recipePower) {
+        } else if (powerType instanceof RecipePowerType recipePowerType) {
 
-            RecipeEntry<Recipe<? extends RecipeInput>> entry = recipePower.getRecipe();
+            RecipeEntry<Recipe<? extends RecipeInput>> entry = recipePowerType.getRecipe();
             if (!(entry.value() instanceof CraftingRecipe craftingRecipe)) {
                 return;
             }
@@ -198,4 +203,5 @@ public final class BadgeManager {
         }
 
     }
+
 }

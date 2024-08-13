@@ -2,7 +2,6 @@ package io.github.apace100.origins.origin;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.networking.packet.s2c.SyncOriginRegistryS2CPacket;
 import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -25,16 +24,16 @@ public class OriginRegistry {
         id -> id
     );
 
-    public static final PacketCodec<ByteBuf, Origin> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginRegistry::get, Origin::getIdentifier);
+    public static final PacketCodec<ByteBuf, Origin> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginRegistry::get, Origin::getId);
     public static final Codec<Origin> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
         OriginRegistry::getResult,
-        Origin::getIdentifier
+        Origin::getId
     );
 
     private static final Map<Identifier, Origin> idToOrigin = new HashMap<>();
 
     public static Origin register(Origin origin) {
-        return register(origin.getIdentifier(), origin);
+        return register(origin.getId(), origin);
     }
 
     public static Origin register(Identifier id, Origin origin) {
@@ -95,7 +94,7 @@ public class OriginRegistry {
     }
 
     public static boolean contains(Origin origin) {
-        return contains(origin.getIdentifier());
+        return contains(origin.getId());
     }
 
     public static void clear() {
@@ -112,12 +111,7 @@ public class OriginRegistry {
     }
 
     public static void send(ServerPlayerEntity player) {
-
-        Map<Identifier, SerializableData.Instance> origins = new HashMap<>();
-        idToOrigin.forEach((id, origin) -> origins.put(id, origin.toData()));
-
-        ServerPlayNetworking.send(player, new SyncOriginRegistryS2CPacket(origins));
-
+        ServerPlayNetworking.send(player, new SyncOriginRegistryS2CPacket(idToOrigin));
     }
 
 }

@@ -2,7 +2,6 @@ package io.github.apace100.origins.networking;
 
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.OriginsClient;
-import io.github.apace100.origins.badge.Badge;
 import io.github.apace100.origins.badge.BadgeManager;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.integration.OriginDataLoadedCallback;
@@ -20,15 +19,12 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
 
-import java.util.*;
-import java.util.function.Predicate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ModPacketsS2C {
 
@@ -89,13 +85,18 @@ public class ModPacketsS2C {
     private static void receiveOriginList(SyncOriginRegistryS2CPacket packet, ClientPlayNetworking.Context context) {
 
         OriginsClient.isServerRunningOrigins = true;
-
         OriginRegistry.reset();
-        packet.origins().entrySet()
-            .stream()
-            .map(e -> Origin.createFromData(e.getKey(), e.getValue()))
-            .filter(Predicate.not(OriginRegistry::contains))
-            .forEach(OriginRegistry::register);
+
+        for (Origin origin : packet.originsById().values()) {
+
+            if (OriginRegistry.contains(origin)) {
+                continue;
+            }
+
+            origin.validate();
+            OriginRegistry.register(origin);
+
+        }
 
     }
 
@@ -112,7 +113,7 @@ public class ModPacketsS2C {
     @Environment(EnvType.CLIENT)
     private static void receiveBadgeList(SyncBadgeRegistryS2CPacket payload, ClientPlayNetworking.Context context) {
         BadgeManager.clear();
-        payload.badges().forEach(BadgeManager::putPowerBadges);
+        payload.badgesById().forEach(BadgeManager::putPowerBadges);
     }
 
 }

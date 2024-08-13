@@ -1,8 +1,8 @@
-package io.github.apace100.origins.power;
+package io.github.apace100.origins.power.type;
 
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.apoli.util.MiscUtil;
 import io.github.apace100.origins.mixin.ActiveTargetGoalAccessor;
 import io.github.apace100.origins.mixin.MobEntityAccessor;
@@ -20,10 +20,10 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class ScareCreepersPower extends Power {
+public class ScareCreepersPowerType extends PowerType {
 
-    public ScareCreepersPower(PowerType<?> type, LivingEntity entity) {
-        super(type, entity);
+    public ScareCreepersPowerType(Power power, LivingEntity entity) {
+        super(power, entity);
     }
 
     public static void modifyGoals(PathAwareEntity pathAwareEntity) {
@@ -41,7 +41,7 @@ public class ScareCreepersPower extends Power {
                 continue;
             }
 
-            Predicate<LivingEntity> targetCondition = MiscUtil.combineAnd(((TargetPredicateAccessor) oldTargetGoal.getTargetPredicate()).getPredicate(), e -> !PowerHolderComponent.hasPower(e, ScareCreepersPower.class));
+            Predicate<LivingEntity> targetCondition = MiscUtil.combineAnd(((TargetPredicateAccessor) oldTargetGoal.getTargetPredicate()).getPredicate(), e -> !PowerHolderComponent.hasPowerType(e, ScareCreepersPowerType.class));
             PrioritizedGoal newTargetPrioGoal = new PrioritizedGoal(oldTargetPrioGoal.getPriority(), new ActiveTargetGoal<>(pathAwareEntity, oldTargetGoal.getTargetClass(), oldTargetGoal.getReciprocalChance(), oldTargetGoal.getCheckVisibility(), oldTargetGoal.getCheckCanNavigate(), targetCondition));
 
             newTargetPrioGoals.add(newTargetPrioGoal);
@@ -49,7 +49,7 @@ public class ScareCreepersPower extends Power {
 
         }
 
-        goalSelector.add(3, new FleeEntityGoal<>(pathAwareEntity, LivingEntity.class, e -> PowerHolderComponent.hasPower(e, ScareCreepersPower.class), 6.0F, 1.0D, 1.2D, EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR::test));
+        goalSelector.add(3, new FleeEntityGoal<>(pathAwareEntity, LivingEntity.class, e -> PowerHolderComponent.hasPowerType(e, ScareCreepersPowerType.class), 6.0F, 1.0D, 1.2D, EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR::test));
         newTargetPrioGoals.forEach(pg -> targetSelector.add(pg.getPriority(), pg.getGoal()));
 
     }

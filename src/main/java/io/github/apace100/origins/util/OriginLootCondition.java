@@ -1,6 +1,5 @@
 package io.github.apace100.origins.util;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.apace100.origins.component.OriginComponent;
@@ -50,7 +49,7 @@ public class OriginLootCondition implements LootCondition {
         for (Map.Entry<OriginLayer, Origin> entry : component.getOrigins().entrySet()) {
 
             Identifier layerId = entry.getKey().getIdentifier();
-            Identifier originId = entry.getValue().getIdentifier();
+            Identifier originId = entry.getValue().getId();
 
             if (layer.map(layerId::equals).orElse(true) && originId.equals(origin)) {
                 return true;

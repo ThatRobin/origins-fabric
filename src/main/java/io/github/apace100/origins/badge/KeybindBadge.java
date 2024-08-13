@@ -1,6 +1,6 @@
 package io.github.apace100.origins.badge;
 
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.Power;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.util.KeyBindingUtil;
 import io.github.apace100.origins.util.PowerKeyManager;
@@ -36,9 +36,9 @@ public record KeybindBadge(Identifier spriteId, String text) implements Badge {
     }
 
     @Override
-    public List<TooltipComponent> getTooltipComponents(PowerType<?> powerType, int widthLimit, float time, TextRenderer textRenderer) {
+    public List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer) {
 
-        String keyId = PowerKeyManager.getKeyIdentifier(powerType.getIdentifier());
+        String keyId = PowerKeyManager.getKeyIdentifier(power.getId());
 
         Text keyName = KeyBindingUtil.getLocalizedName(keyId);
         Text keyText = Text.literal("[").append(keyName).append("]");

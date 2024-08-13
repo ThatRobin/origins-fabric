@@ -11,7 +11,7 @@
 		"origins:phantomize_callback"
 	],
 	"icon": {
-		"item": "minecraft:phantom_membrane"
+		"id": "minecraft:phantom_membrane"
 	},
 	"order": 2,
 	"impact": 3

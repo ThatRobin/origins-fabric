@@ -1,9 +1,9 @@
-package io.github.apace100.origins.power;
+package io.github.apace100.origins.power.type;
 
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.mixin.EntityAccessor;
 import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.mixin.LivingEntityAccessor;
 import io.github.apace100.origins.registry.ModDamageSources;
 import net.minecraft.entity.LivingEntity;
@@ -11,10 +11,10 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.FluidTags;
 
-public class WaterBreathingPower extends Power {
+public class WaterBreathingPowerType extends PowerType {
 
-    public WaterBreathingPower(PowerType<?> type, LivingEntity entity) {
-        super(type, entity);
+    public WaterBreathingPowerType(Power power, LivingEntity entity) {
+        super(power, entity);
     }
 
     public static boolean shouldDrown(LivingEntity entity) {
@@ -25,12 +25,12 @@ public class WaterBreathingPower extends Power {
 
     public static void tick(LivingEntity entity) {
 
-        if (!PowerHolderComponent.hasPower(entity, WaterBreathingPower.class)) {
+        if (!PowerHolderComponent.hasPowerType(entity, WaterBreathingPowerType.class)) {
             return;
         }
 
         LivingEntityAccessor entityAccess = (LivingEntityAccessor) entity;
-        if (WaterBreathingPower.shouldDrown(entity)) {
+        if (WaterBreathingPowerType.shouldDrown(entity)) {
 
             int landGain = entityAccess.callGetNextAirOnLand(0);
             int landLoss = entityAccess.callGetNextAirUnderwater(entity.getAir());

@@ -1,4 +1,4 @@
-package io.github.apace100.origins.command;
+package io.github.apace100.origins.command.argument;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -17,7 +17,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,7 +57,7 @@ public class OriginArgumentType implements ArgumentType<Identifier> {
           Identifier originLayerId = context.getArgument("layer", Identifier.class);
           OriginLayer originLayer = OriginLayers.getLayer(originLayerId);
 
-          availableOrigins.add(Origin.EMPTY.getIdentifier());
+          availableOrigins.add(Origin.EMPTY.getId());
           if (originLayer != null) availableOrigins.addAll(originLayer.getOrigins());
       }
 

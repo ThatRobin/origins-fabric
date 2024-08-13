@@ -1,7 +1,7 @@
 package io.github.apace100.origins.mixin;
 
 
-import io.github.apace100.origins.power.ScareCreepersPower;
+import io.github.apace100.origins.power.type.ScareCreepersPowerType;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.Targeter;
@@ -24,7 +24,7 @@ public abstract class ScareCreepersMixin extends LivingEntity implements Targete
     private void origins$modifyGoals(EntityType<?> entityType, World world, CallbackInfo ci) {
 
         if ((MobEntity) (Object) this instanceof CreeperEntity thisAsCreeper) {
-            ScareCreepersPower.modifyGoals(thisAsCreeper);
+            ScareCreepersPowerType.modifyGoals(thisAsCreeper);
         }
 
     }

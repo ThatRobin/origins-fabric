@@ -2,7 +2,7 @@ package io.github.apace100.origins.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.sugar.Local;
-import io.github.apace100.origins.power.LikeWaterPower;
+import io.github.apace100.origins.power.type.LikeWaterPowerType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -20,7 +20,7 @@ public abstract class LikeWaterMixin extends Entity {
 
     @ModifyExpressionValue(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;applyFluidMovingSpeed(DZLnet/minecraft/util/math/Vec3d;)Lnet/minecraft/util/math/Vec3d;"))
     private Vec3d origins$modifyVerticalFluidMovingSpeed(Vec3d original, @Local(ordinal = 0) double fallVelocity) {
-        return LikeWaterPower.modifyFluidMovement(this, original, fallVelocity);
+        return LikeWaterPowerType.modifyFluidMovement(this, original, fallVelocity);
     }
 
 }

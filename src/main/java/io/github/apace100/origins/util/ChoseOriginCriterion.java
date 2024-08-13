@@ -9,7 +9,6 @@ import net.minecraft.predicate.entity.EntityPredicate;
 import net.minecraft.predicate.entity.LootContextPredicate;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
 
 import java.util.Optional;
 
@@ -40,7 +39,7 @@ public class ChoseOriginCriterion extends AbstractCriterion<ChoseOriginCriterion
         }
 
         public boolean matches(Origin origin) {
-            return origin.getIdentifier().equals(originId);
+            return origin.getId().equals(originId);
         }
 
     }

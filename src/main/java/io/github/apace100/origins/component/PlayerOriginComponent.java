@@ -1,13 +1,14 @@
 package io.github.apace100.origins.component;
 
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.origin.OriginLayers;
 import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.registry.ModComponents;
 import io.github.apace100.origins.util.ChoseOriginCriterion;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -18,8 +19,10 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 public class PlayerOriginComponent implements OriginComponent {
 
@@ -88,7 +91,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
         Origin oldOrigin = getOrigin(layer);
         if (oldOrigin != null) {
-            PowerHolderComponent.KEY.get(player).removeAllPowersFromSource(oldOrigin.getIdentifier());
+            PowerHolderComponent.KEY.get(player).removeAllPowersFromSource(oldOrigin.getId());
         }
 
         origins.remove(layer);
@@ -104,10 +107,17 @@ public class PlayerOriginComponent implements OriginComponent {
         }
 
         PowerHolderComponent powerComponent = PowerHolderComponent.KEY.get(player);
+
         if (oldOrigin != null) {
 
-            if (!oldOrigin.getIdentifier().equals(origin.getIdentifier())) {
-                powerComponent.removeAllPowersFromSource(oldOrigin.getIdentifier());
+            if (!oldOrigin.getId().equals(origin.getId())) {
+
+                int removedPowers = powerComponent.removeAllPowersFromSource(oldOrigin.getId());
+
+                if (removedPowers > 0) {
+                    PowerHolderComponent.PacketHandlers.REVOKE_ALL_POWERS.sync(player, List.of(oldOrigin.getId()));
+                }
+
             }
 
             else if (!oldOrigin.toJson().equals(origin.toJson())) {
@@ -130,19 +140,26 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     private void grantPowersFromOrigin(Origin origin, PowerHolderComponent powerComponent) {
-        Identifier sourceId = origin.getIdentifier();
-        origin.getPowerTypes()
-            .stream()
-            .filter(pt -> !powerComponent.hasPower(pt, sourceId))
-            .forEach(pt -> powerComponent.addPower(pt, sourceId));
+        PowerHolderComponent.grantPower(player, Map.of(origin.getId(), origin.getPowers()), true);
     }
 
     private void revokeRemovedPowers(Origin origin, PowerHolderComponent powerComponent) {
-        Identifier sourceId = origin.getIdentifier();
-        powerComponent.getPowersFromSource(sourceId)
+
+        Identifier sourceId = origin.getId();
+        List<Power> powers = powerComponent.getPowersFromSource(sourceId)
             .stream()
-            .filter(pt -> !origin.hasPowerType(pt))
-            .forEach(pt -> powerComponent.removePower(pt, sourceId));
+            .filter(Predicate.not(origin::hasPower))
+            .toList();
+
+        boolean revoked = powers
+            .stream()
+            .map(pt -> powerComponent.removePower(pt, sourceId))
+            .reduce(false, Boolean::logicalOr);
+
+        if (revoked) {
+            PowerHolderComponent.PacketHandlers.REVOKE_POWERS.sync(player, Map.of(sourceId, powers));
+        }
+
     }
 
     @Override
@@ -238,15 +255,15 @@ public class PlayerOriginComponent implements OriginComponent {
             try {
 
                 Identifier legacyPowerId = Identifier.of(legacyPowerString);
-                PowerType<?> legacyPowerType = PowerTypeRegistry.get(legacyPowerId);
+                Power legacyPower = PowerManager.get(legacyPowerId);
 
-                if (!powerComponent.hasPower(legacyPowerType)) {
+                if (!powerComponent.hasPower(legacyPower)) {
                     continue;
                 }
 
                 try {
                     NbtElement legacyPowerData = legacyPowerNbt.get("Data");
-                    powerComponent.getPower(legacyPowerType).fromTag(legacyPowerData);
+                    powerComponent.getPowerType(legacyPower).fromTag(legacyPowerData);
                 } catch (ClassCastException e) {
                     //  Occurs when the power was overridden by a data pack since last world load
                     //  where the overridden power now uses different data classes
@@ -271,7 +288,7 @@ public class PlayerOriginComponent implements OriginComponent {
             NbtCompound originLayerNbt = new NbtCompound();
 
             originLayerNbt.putString("Layer", layer.getIdentifier().toString());
-            originLayerNbt.putString("Origin", origin.getIdentifier().toString());
+            originLayerNbt.putString("Origin", origin.getId().toString());
 
             originLayersNbt.add(originLayerNbt);
 
@@ -285,7 +302,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
     @Override
     public void sync() {
-        OriginComponent.sync(this.player);
+        ModComponents.ORIGIN.sync(player);
     }
 
 }

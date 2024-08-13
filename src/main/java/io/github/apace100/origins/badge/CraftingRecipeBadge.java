@@ -1,8 +1,8 @@
 package io.github.apace100.origins.badge;
 
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.ModifyCraftingPower;
-import io.github.apace100.apoli.power.PowerType;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.type.ModifyCraftingPowerType;
 import io.github.apace100.apoli.util.InventoryUtil;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.Origins;
@@ -12,7 +12,6 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.StackReference;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.*;
@@ -66,7 +65,7 @@ public record CraftingRecipeBadge(Identifier spriteId,
 
     @Environment(EnvType.CLIENT)
     @Override
-    public List<TooltipComponent> getTooltipComponents(PowerType<?> powerType, int widthLimit, float time, TextRenderer textRenderer) {
+    public List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer) {
 
         MinecraftClient client = MinecraftClient.getInstance();
         List<TooltipComponent> tooltips = new LinkedList<>();
@@ -81,10 +80,10 @@ public record CraftingRecipeBadge(Identifier spriteId,
         DynamicRegistryManager registryManager = client.world.getRegistryManager();
         StackReference outputStackReference = InventoryUtil.createStackReference(recipe.value().getResult(registryManager));
 
-        PowerHolderComponent.getPowers(client.player, ModifyCraftingPower.class)
+        PowerHolderComponent.getPowerTypes(client.player, ModifyCraftingPowerType.class)
             .stream()
             .filter(p -> p.doesApply(recipe.id(), outputStackReference.get()))
-            .max(Comparator.comparing(ModifyCraftingPower::getPriority))
+            .max(Comparator.comparing(ModifyCraftingPowerType::getPriority))
             .ifPresent(p -> p.getNewResult(outputStackReference));
         CraftingRecipeTooltipComponent recipeTooltip = new CraftingRecipeTooltipComponent(recipeWidth, this.peekInputs(time), outputStackReference.get());
 

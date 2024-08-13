@@ -116,7 +116,7 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
                 }
 
                 if (originUnregistered) {
-                    Origins.LOGGER.error("Removed unregistered origin \"{}\" from origin layer \"{}\" from player {}!", oldOrigin.getIdentifier(), oldLayer.getIdentifier(), player.getName().getString());
+                    Origins.LOGGER.error("Removed unregistered origin \"{}\" from origin layer \"{}\" from player {}!", oldOrigin.getId(), oldLayer.getIdentifier(), player.getName().getString());
                     component.setOrigin(oldLayer, Origin.EMPTY);
                 } else {
                     Origins.LOGGER.error("Removed unregistered origin layer \"{}\" from player {}!", oldLayer.getIdentifier(), player.getName().getString());
@@ -127,12 +127,12 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
 
             }
 
-            Origin newOrigin = OriginRegistry.get(oldOrigin.getIdentifier());
+            Origin newOrigin = OriginRegistry.get(oldOrigin.getId());
             if (oldOrigin.toJson().equals(newOrigin.toJson())) {
                 continue;
             }
 
-            Origins.LOGGER.warn("Mismatched data fields of origin \"{}\" from player {}! Updating...", oldOrigin.getIdentifier(), player.getName().getString());
+            Origins.LOGGER.warn("Mismatched data fields of origin \"{}\" from player {}! Updating...", oldOrigin.getId(), player.getName().getString());
             mismatch = true;
 
             component.setOrigin(oldLayer, newOrigin);

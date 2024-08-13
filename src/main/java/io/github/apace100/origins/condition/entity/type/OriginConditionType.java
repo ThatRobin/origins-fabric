@@ -1,6 +1,6 @@
-package io.github.apace100.origins.power.condition.entity;
+package io.github.apace100.origins.condition.entity.type;
 
-import io.github.apace100.apoli.power.factory.condition.ConditionFactory;
+import io.github.apace100.apoli.condition.factory.ConditionTypeFactory;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.Origins;
@@ -11,23 +11,21 @@ import io.github.apace100.origins.origin.OriginLayers;
 import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
-public class OriginCondition {
+public class OriginConditionType {
 
-    public static boolean condition(SerializableData.Instance data, Entity entity) {
+    public static boolean condition(Entity entity, Identifier originId, @Nullable Identifier layerId) {
 
         OriginComponent originComponent = ModComponents.ORIGIN.getNullable(entity);
         if (originComponent == null) {
             return false;
         }
 
-        Identifier originId = data.get("origin");
-        Identifier layerId = data.get("layer");
-
         if (layerId == null) {
             return originComponent.getOrigins().values()
                 .stream()
-                .map(Origin::getIdentifier)
+                .map(Origin::getId)
                 .anyMatch(originId::equals);
         }
 
@@ -38,17 +36,20 @@ public class OriginCondition {
 
         Origin origin = originComponent.getOrigin(layer);
         return origin != null
-            && origin.getIdentifier().equals(originId);
+            && origin.getId().equals(originId);
 
     }
 
-    public static ConditionFactory<Entity> getFactory() {
-        return new ConditionFactory<>(
+    public static ConditionTypeFactory<Entity> getFactory() {
+        return new ConditionTypeFactory<>(
             Origins.identifier("origin"),
             new SerializableData()
                 .add("origin", SerializableDataTypes.IDENTIFIER)
                 .add("layer", SerializableDataTypes.IDENTIFIER, null),
-            OriginCondition::condition
+            (data, entity) -> condition(entity,
+                data.get("origin"),
+                data.get("layer")
+            )
         );
     }
 
