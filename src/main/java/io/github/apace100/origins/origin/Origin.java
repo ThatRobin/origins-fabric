@@ -37,10 +37,24 @@ public class Origin implements Validatable {
             .addSupplied("powers", ApoliDataTypes.POWER_REFERENCE.listOf(), ArrayList::new)
             .addSupplied("upgrades", OriginsDataTypes.UPGRADES, ArrayList::new)
             .add("impact", OriginsDataTypes.IMPACT, Impact.NONE)
-            .addFunctionedDefault("name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, data -> Text.translatable(Util.createTranslationKey("origin", data.getId("id")) + ".name"))
-            .addFunctionedDefault("description", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, data -> Text.translatable(Util.createTranslationKey("origin", data.getId("id")) + ".description"))
+            .add("name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
+            .add("description", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
             .add("unchoosable", SerializableDataTypes.BOOLEAN, false)
-            .add("order", SerializableDataTypes.INT, Integer.MAX_VALUE),
+            .add("order", SerializableDataTypes.INT, Integer.MAX_VALUE)
+            .postProcessor(data -> {
+
+                Identifier id = data.get("id");
+                String baseKey = Util.createTranslationKey("origin", id);
+
+                if (!data.isPresent("name")) {
+                    data.set("name", Text.translatable(baseKey + ".name"));
+                }
+
+                if (!data.isPresent("description")) {
+                    data.set("description", Text.translatable(baseKey + ".description"));
+                }
+
+            }),
         data -> {
             ItemStack iconStack = data.get("icon");
             return new Origin(
@@ -91,7 +105,7 @@ public class Origin implements Validatable {
     protected Origin(Identifier id, ItemStack icon, List<Power> powers, List<OriginUpgrade> upgrades, Impact impact, Text name, Text description, boolean unchoosable, boolean special, int order) {
         this.id = id;
         this.displayItem = icon;
-        this.powers = powers;
+        this.powers = new LinkedList<>(powers);
         this.upgrades = upgrades;
         this.impact = impact;
         this.name = name;

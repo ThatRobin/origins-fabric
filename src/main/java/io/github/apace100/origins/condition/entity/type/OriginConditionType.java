@@ -7,7 +7,7 @@ import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.Identifier;
@@ -29,7 +29,7 @@ public class OriginConditionType {
                 .anyMatch(originId::equals);
         }
 
-        OriginLayer layer = OriginLayers.getNullableLayer(layerId);
+        OriginLayer layer = OriginLayerManager.getNullable(layerId);
         if (layer == null) {
             return false;
         }

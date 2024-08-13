@@ -8,7 +8,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
@@ -35,7 +35,7 @@ public class LayerArgumentType implements ArgumentType<Identifier> {
       Identifier id = context.getArgument(argumentName, Identifier.class);
 
       try {
-         return OriginLayers.getLayer(id);
+         return OriginLayerManager.get(id);
       }
 
       catch(IllegalArgumentException e) {
@@ -46,7 +46,7 @@ public class LayerArgumentType implements ArgumentType<Identifier> {
 
    @Override
    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-      return CommandSource.suggestIdentifiers(OriginLayers.getLayers().stream().filter(OriginLayer::isEnabled).map(OriginLayer::getIdentifier), builder);
+      return CommandSource.suggestIdentifiers(OriginLayerManager.getLayers().stream().filter(OriginLayer::isEnabled).map(OriginLayer::getId), builder);
    }
 
 }

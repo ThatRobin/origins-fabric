@@ -3,8 +3,11 @@ package io.github.apace100.origins.origin;
 import carpet.patches.EntityPlayerMPFake;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import io.github.apace100.apoli.util.PrioritizedEntry;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
@@ -25,19 +28,20 @@ import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.JsonHelper;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.Nullable;
 import org.ladysnake.cca.api.v3.component.ComponentProvider;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-public class OriginLayers extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
+public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
 
     public static final Identifier PHASE = Origins.identifier("phase/origin_layers");
-
     public static final Codec<Identifier> VALIDATING_CODEC = Identifier.CODEC.comapFlatMap(
         id -> contains(id)
             ? DataResult.success(id)
@@ -45,22 +49,18 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
         id -> id
     );
 
-    public static final PacketCodec<ByteBuf, OriginLayer> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginLayers::getLayer, OriginLayer::getIdentifier);
-    public static final Codec<OriginLayer> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(
-        OriginLayers::getLayerResult,
-        OriginLayer::getIdentifier
-    );
+    public static final PacketCodec<ByteBuf, OriginLayer> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginLayerManager::get, OriginLayer::getId);
+    public static final Codec<OriginLayer> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(OriginLayerManager::getResult, OriginLayer::getId);
 
-    private static final HashMap<Identifier, OriginLayer> LAYERS = new HashMap<>();
+    private static final Map<Identifier, Integer> LOADING_PRIORITIES = new HashMap<>();
+    private static final Map<Identifier, OriginLayer> LAYERS = new HashMap<>();
+
     private static final Gson GSON = new GsonBuilder()
         .disableHtmlEscaping()
         .setPrettyPrinting()
         .create();
 
-    private static Identifier prevId = null;
-    private static int prevPriority = Integer.MIN_VALUE;
-
-    public OriginLayers() {
+    public OriginLayerManager() {
         super(GSON, "origin_layers", ResourceType.SERVER_DATA);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(OriginManager.PHASE, PHASE);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(PHASE, (player, joined) -> {
@@ -68,9 +68,9 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
             OriginComponent component = ModComponents.ORIGIN.get(player);
             Map<Identifier, OriginLayer> layers = new HashMap<>();
 
-            for (OriginLayer layer : OriginLayers.getLayers()) {
+            for (OriginLayer layer : OriginLayerManager.getLayers()) {
 
-                layers.put(layer.getIdentifier(), layer);
+                layers.put(layer.getId(), layer);
 
                 if (layer.isEnabled() && !component.hasOrigin(layer)) {
                     component.setOrigin(layer, Origin.EMPTY);
@@ -104,10 +104,10 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
             OriginLayer oldLayer = entry.getKey();
             Origin oldOrigin = entry.getValue();
 
-            boolean originOrLayerNotAvailable = !OriginLayers.contains(oldLayer)
+            boolean originOrLayerNotAvailable = !OriginLayerManager.contains(oldLayer)
                                              || !OriginRegistry.contains(oldOrigin);
-            boolean originUnregistered = OriginLayers.contains(oldLayer)
-                                      && !OriginLayers.getLayer(oldLayer.getIdentifier()).contains(oldOrigin);
+            boolean originUnregistered = OriginLayerManager.contains(oldLayer)
+                                      && !OriginLayerManager.get(oldLayer.getId()).contains(oldOrigin);
 
             if (originOrLayerNotAvailable || originUnregistered) {
 
@@ -116,10 +116,10 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
                 }
 
                 if (originUnregistered) {
-                    Origins.LOGGER.error("Removed unregistered origin \"{}\" from origin layer \"{}\" from player {}!", oldOrigin.getId(), oldLayer.getIdentifier(), player.getName().getString());
+                    Origins.LOGGER.error("Removed unregistered origin \"{}\" from origin layer \"{}\" from player {}!", oldOrigin.getId(), oldLayer.getId(), player.getName().getString());
                     component.setOrigin(oldLayer, Origin.EMPTY);
                 } else {
-                    Origins.LOGGER.error("Removed unregistered origin layer \"{}\" from player {}!", oldLayer.getIdentifier(), player.getName().getString());
+                    Origins.LOGGER.error("Removed unregistered origin layer \"{}\" from player {}!", oldLayer.getId(), player.getName().getString());
                     component.removeLayer(oldLayer);
                 }
 
@@ -178,98 +178,105 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
     @Override
     protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
 
+        LOADING_PRIORITIES.clear();
         clear();
-        prevId = null;
 
-        Map<Identifier, List<OriginLayer>> loadedLayers = new HashMap<>();
+        Map<Identifier, List<PrioritizedEntry<OriginLayer>>> loadedLayers = new HashMap<>();
+        Origins.LOGGER.info("Loading origin layers from data packs...");
 
-        Origins.LOGGER.info("Loading origin layer from data files...");
         prepared.forEach((packName, id, jsonElement) -> {
+
             try {
 
                 SerializableData.CURRENT_NAMESPACE = id.getNamespace();
                 SerializableData.CURRENT_PATH = id.getPath();
 
-                if (prevId == null || !prevId.equals(id)) {
+                Origins.LOGGER.info("Trying to add origin layer \"{}\" from data pack [{}]", id, packName);
 
-                    prevPriority = Integer.MIN_VALUE;
-                    prevId = id;
-
+                if (!(jsonElement instanceof JsonObject jsonObject)) {
+                    throw new JsonSyntaxException("Expected a JSON object");
                 }
 
-                Origins.LOGGER.info("Trying to read origin layer file \"{}\" from data pack [{}]", id, packName);
+                OriginLayer layer = OriginLayer.fromJson(id, jsonObject);
+                int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
 
-                OriginLayer layer = OriginLayer.fromJson(id, jsonElement.getAsJsonObject());
-                int loadingPriority = layer.getLoadingPriority();
+                PrioritizedEntry<OriginLayer> entry = new PrioritizedEntry<>(layer, currLoadingPriority);
+                int prevLoadingPriority = LOADING_PRIORITIES.getOrDefault(id, Integer.MIN_VALUE);
 
-                if (loadingPriority < prevPriority) {
-                    Origins.LOGGER.warn("Ignoring replaced duplicate origin layer \"{}\" with a lower loading priority.", id);
-                    return;
+                if (layer.shouldReplace() && currLoadingPriority <= prevLoadingPriority) {
+                    Origins.LOGGER.warn("Ignoring origin layer \"{}\" with 'replace' set to true from data pack [{}]. Its loading priority ({}) must be higher than {} to replace the origin layer!", id, packName, currLoadingPriority, prevLoadingPriority);
                 }
 
-                List<String> invalidOrigins = layer.getConditionedOrigins()
-                    .stream()
-                    .flatMap(co -> co.origins().stream())
-                    .filter(Predicate.not(OriginRegistry::contains))
-                    .map(Identifier::toString)
-                    .toList();
+                else {
 
-                if (!invalidOrigins.isEmpty()) {
-                    Origins.LOGGER.error("Origin layer \"{}\" (from data pack [{}]) contained {} invalid origin(s): {}", layer.id, packName, invalidOrigins.size(), String.join(", ", invalidOrigins));
-                }
+                    if (layer.shouldReplace()) {
+                        Origins.LOGGER.info("Origin layer \"{}\" has been replaced by data pack [{}]!", id, packName);
+                    }
 
-                List<OriginLayer> layers = loadedLayers.computeIfAbsent(id, k -> new LinkedList<>());
+                    List<String> invalidOrigins = layer.getConditionedOrigins()
+                        .stream()
+                        .map(OriginLayer.ConditionedOrigin::origins)
+                        .flatMap(Collection::stream)
+                        .filter(Predicate.not(OriginRegistry::contains))
+                        .map(Identifier::toString)
+                        .toList();
 
-                if (layer.shouldReplaceConditionedOrigins()) {
-                    layers.clear();
-                    prevPriority = loadingPriority + 1;
-                }
+                    if (!invalidOrigins.isEmpty()) {
+                        Origins.LOGGER.error("Origin layer \"{}\" contained {} invalid origin(s): {}", id, invalidOrigins.size(), String.join(", ", invalidOrigins));
+                    }
 
-                layers.add(layer);
+                    loadedLayers.computeIfAbsent(id, k -> new LinkedList<>()).add(entry);
+                    LOADING_PRIORITIES.put(id, currLoadingPriority);
 
-            } catch (Exception e) {
-                Origins.LOGGER.error("There was a problem reading origin layer file \"{}\" (skipping): {}", id, e.getMessage());
-            }
-        });
-
-        Origins.LOGGER.info("Finished loading origin layers. Merging similar origin layers...");
-        loadedLayers.forEach((id, layers) -> {
-
-            OriginLayer[] currentLayer = {null};
-            List<OriginLayer> sortedLayers = layers
-                .stream()
-                .sorted(Comparator.comparing(OriginLayer::getLoadingPriority))
-                .toList();
-
-            for (OriginLayer layer : sortedLayers) {
-
-                if (currentLayer[0] == null) {
-                    currentLayer[0] = layer;
-                } else {
-                    currentLayer[0].merge(layer);
                 }
 
             }
 
-            OriginLayers.register(id, currentLayer[0]);
+            catch (Exception e) {
+                Origins.LOGGER.error("There was a problem reading origin layer \"{}\": {}", id, e.getMessage());
+            }
 
         });
 
-        Origins.LOGGER.info("Finished merging similar origin layers from data files. Read {} origin layers.", loadedLayers.size());
+        Origins.LOGGER.info("Finished loading {} origin layer(s). Merging similar origin layers...", loadedLayers.size());
+        loadedLayers.forEach((id, entries) -> {
+
+            AtomicReference<OriginLayer> currentLayer = new AtomicReference<>();
+            entries.sort(Comparator.comparing(PrioritizedEntry::priority));
+
+            for (PrioritizedEntry<OriginLayer> entry : entries) {
+
+                if (currentLayer.get() == null) {
+                    currentLayer.set(entry.value());
+                }
+
+                else {
+                    currentLayer.accumulateAndGet(entry.value(), OriginLayer::merge);
+                }
+
+            }
+
+            register(id, currentLayer.get());
+
+        });
+
+        Origins.LOGGER.info("Finished merging similar origin layers. Registry contains {} origin layer(s).", size());
         OriginDataLoadedCallback.EVENT.invoker().onDataLoaded(false);
 
         SerializableData.CURRENT_NAMESPACE = null;
         SerializableData.CURRENT_PATH = null;
 
+        LOADING_PRIORITIES.clear();
+
     }
 
-    public static DataResult<OriginLayer> getLayerResult(Identifier id) {
+    public static DataResult<OriginLayer> getResult(Identifier id) {
         return LAYERS.containsKey(id)
             ? DataResult.success(LAYERS.get(id))
             : DataResult.error(() -> "Could not get layer from id '" + id.toString() + "', as it doesn't exist!");
     }
 
-    public static OriginLayer getLayer(Identifier id) {
+    public static OriginLayer get(Identifier id) {
 
         if (!LAYERS.containsKey(id)) {
             throw new IllegalArgumentException("Could not get layer from id '" + id.toString() + "', as it doesn't exist!");
@@ -280,7 +287,7 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
     }
 
     @Nullable
-    public static OriginLayer getNullableLayer(Identifier id) {
+    public static OriginLayer getNullable(Identifier id) {
         return LAYERS.get(id);
     }
 
@@ -290,8 +297,9 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
             throw new IllegalArgumentException("Duplicate origin layer id tried to register: '" + id + "'");
         }
 
-        layer.id = id;
-        LAYERS.put(id, layer);
+        else {
+            LAYERS.put(id, layer);
+        }
 
     }
 
@@ -312,7 +320,7 @@ public class OriginLayers extends IdentifiableMultiJsonDataLoader implements Ide
     }
 
     public static boolean contains(OriginLayer layer) {
-        return contains(layer.getIdentifier());
+        return contains(layer.getId());
     }
 
     public static boolean contains(Identifier id) {

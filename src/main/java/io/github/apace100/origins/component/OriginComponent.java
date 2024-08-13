@@ -6,7 +6,7 @@ import io.github.apace100.apoli.power.type.ModifyPlayerSpawnPowerType;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.power.type.OriginsCallbackPowerType;
 import io.github.apace100.origins.registry.ModComponents;
@@ -75,7 +75,7 @@ public interface OriginComponent extends AutoSyncedComponent, CommonTickingCompo
 		List<OriginLayer> layers = new ArrayList<>();
 		boolean choseOneAutomatically = false;
 
-		OriginLayers.getLayers()
+		OriginLayerManager.getLayers()
 			.stream()
 			.filter(OriginLayer::isEnabled)
 			.forEach(layers::add);

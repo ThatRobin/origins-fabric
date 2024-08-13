@@ -102,7 +102,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 			button -> {
 
 				Identifier originId = super.getCurrentOrigin().getId();
-				Identifier layerId = getCurrentLayer().getIdentifier();
+				Identifier layerId = getCurrentLayer().getId();
 
 				if (currentOriginIndex == originSelection.size()) {
 					ClientPlayNetworking.send(new ChooseRandomOriginC2SPacket(layerId));
@@ -171,10 +171,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 	@Override
 	protected Text getTitleText() {
-		OriginLayer currentLayer = super.getCurrentLayer();
-		return currentLayer.shouldOverrideChooseOriginTitle()
-			? currentLayer.getChooseOriginTitle()
-			: Text.translatable(Origins.MODID + ".gui.choose_origin.title", currentLayer.getName());
+		return super.getCurrentLayer().getChooseOriginTitle();
 	}
 
 	private void initRandomOrigin() {

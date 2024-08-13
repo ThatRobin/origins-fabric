@@ -48,7 +48,7 @@ public class OriginLootCondition implements LootCondition {
 
         for (Map.Entry<OriginLayer, Origin> entry : component.getOrigins().entrySet()) {
 
-            Identifier layerId = entry.getKey().getIdentifier();
+            Identifier layerId = entry.getKey().getId();
             Identifier originId = entry.getValue().getId();
 
             if (layer.map(layerId::equals).orElse(true) && originId.equals(origin)) {

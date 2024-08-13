@@ -10,7 +10,7 @@ import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -113,7 +113,7 @@ public class OriginCommand {
 			
 		}
 		
-		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getIdentifier()));
+		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getId()));
 		
 		return processedTargets;
 		
@@ -150,7 +150,7 @@ public class OriginCommand {
 			
 		}
 		
-		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getIdentifier()));
+		else serverCommandSource.sendError(Text.translatable("commands.origin.unregistered_in_layer", origin.getId(), originLayer.getId()));
 		
 		return processedTargets;
 		
@@ -269,7 +269,7 @@ public class OriginCommand {
 
 		ServerCommandSource serverCommandSource = commandContext.getSource();
 		List<ServerPlayerEntity> targets = new ArrayList<>();
-		List<OriginLayer> originLayers = OriginLayers.getLayers().stream().filter(OriginLayer::isRandomAllowed).toList();
+		List<OriginLayer> originLayers = OriginLayerManager.getLayers().stream().filter(OriginLayer::isRandomAllowed).toList();
 
 		switch (targetType) {
 			case INVOKER -> targets.add(serverCommandSource.getPlayerOrThrow());
@@ -299,7 +299,7 @@ public class OriginCommand {
 		if (layer != null) {
 			layersToProcess.add(layer);
 		} else {
-			layersToProcess.addAll(OriginLayers.getLayers());
+			layersToProcess.addAll(OriginLayerManager.getLayers());
 		}
 
 		layersToProcess
@@ -308,7 +308,7 @@ public class OriginCommand {
 			.forEach(ol -> component.setOrigin(ol, Origin.EMPTY));
 
 		boolean originAutomaticallyAssigned = component.checkAutoChoosingLayers(target, false);
-		int originOptions = layer != null ? layer.getOriginOptionCount(target) : OriginLayers.getOriginOptionCount(target);
+		int originOptions = layer != null ? layer.getOriginOptionCount(target) : OriginLayerManager.getOriginOptionCount(target);
 
 		component.selectingOrigin(!originAutomaticallyAssigned || originOptions > 0);
 		component.sync();
@@ -338,7 +338,7 @@ public class OriginCommand {
 			"Player {} was randomly assigned the origin {} for layer {}",
 			target.getDisplayName().getString(),
 			origin.getId().toString(),
-			originLayer.getIdentifier().toString()
+			originLayer.getId().toString()
 		);
 
 		return origin;

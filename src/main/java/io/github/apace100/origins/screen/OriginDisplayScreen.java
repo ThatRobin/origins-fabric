@@ -298,7 +298,9 @@ public class OriginDisplayScreen extends Screen {
 
         if (refreshOriginNameWidget || (origin != prevOrigin || layer != prevLayer)) {
 
-            Text name = origin == Origin.EMPTY && layer != null && layer.getMissingName() != null ? layer.getMissingName() : origin.getName();
+            Text name = origin == Origin.EMPTY && layer != null && layer.getMissingName() != null
+                ? layer.getMissingName()
+                : origin.getName();
 
             originNameWidget = new ScrollingTextWidget(guiLeft + 38, guiTop + 18, WINDOW_WIDTH - (62 + 3 * 8), 9, name, true, textRenderer);
             originNameWidget.setAlignment(TextAlignment.LEFT);

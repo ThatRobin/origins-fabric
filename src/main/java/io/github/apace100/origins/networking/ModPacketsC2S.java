@@ -9,7 +9,7 @@ import io.github.apace100.origins.networking.packet.s2c.ConfirmOriginS2CPacket;
 import io.github.apace100.origins.networking.task.VersionHandshakeTask;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
@@ -42,7 +42,7 @@ public class ModPacketsC2S {
         ServerPlayerEntity player = context.player();
 
         OriginComponent component = ModComponents.ORIGIN.get(player);
-        OriginLayer layer = OriginLayers.getLayer(packet.layerId());
+        OriginLayer layer = OriginLayerManager.get(packet.layerId());
 
         if (component.hasAllOrigins() && component.hasOrigin(layer)) {
             Origins.LOGGER.warn("Player {} tried to choose origin for layer \"{}\" while having one already.", player.getName().getString(), packet.layerId());
@@ -83,7 +83,7 @@ public class ModPacketsC2S {
         ServerPlayerEntity player = context.player();
 
         OriginComponent component = ModComponents.ORIGIN.get(player);
-        OriginLayer layer = OriginLayers.getLayer(packet.layerId());
+        OriginLayer layer = OriginLayerManager.get(packet.layerId());
 
         if (component.hasAllOrigins() && component.hasOrigin(layer)) {
             Origins.LOGGER.warn("Player {} tried to choose origin for layer \"{}\" while having one already.", player.getName().getString(), packet.layerId());
@@ -168,7 +168,7 @@ public class ModPacketsC2S {
     }
 
     private static void confirmOrigin(ServerPlayerEntity player, OriginLayer layer, Origin origin) {
-        ServerPlayNetworking.send(player, new ConfirmOriginS2CPacket(layer.getIdentifier(), origin.getId()));
+        ServerPlayNetworking.send(player, new ConfirmOriginS2CPacket(layer.getId(), origin.getId()));
     }
 
 }

@@ -6,7 +6,7 @@ import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import io.github.apace100.origins.util.ChoseOriginCriterion;
@@ -58,7 +58,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
     @Override
     public boolean hasAllOrigins() {
-        return OriginLayers.getLayers()
+        return OriginLayerManager.getLayers()
             .stream()
             .allMatch(layer -> !layer.isEnabled()
                             || (layer.getOrigins().isEmpty() || layer.getOriginOptionCount(player) == 0)
@@ -184,7 +184,7 @@ public class PlayerOriginComponent implements OriginComponent {
         if (compoundTag.contains("Origin")) {
             try {
 
-                OriginLayer defaultOriginLayer = OriginLayers.getLayer(Origins.identifier("origin"));
+                OriginLayer defaultOriginLayer = OriginLayerManager.get(Origins.identifier("origin"));
                 origins.put(defaultOriginLayer, OriginRegistry.get(Identifier.of(compoundTag.getString("Origin"))));
 
             } catch (Exception ignored) {
@@ -201,7 +201,7 @@ public class PlayerOriginComponent implements OriginComponent {
                     Identifier layerId = Identifier.of(originLayerNbt.getString("Layer"));
                     Identifier originId = Identifier.of(originLayerNbt.getString("Origin"));
 
-                    OriginLayer layer = OriginLayers.getLayer(layerId);
+                    OriginLayer layer = OriginLayerManager.get(layerId);
                     Origin origin = OriginRegistry.get(originId);
 
                     origins.put(layer, origin);
@@ -287,7 +287,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
             NbtCompound originLayerNbt = new NbtCompound();
 
-            originLayerNbt.putString("Layer", layer.getIdentifier().toString());
+            originLayerNbt.putString("Layer", layer.getId().toString());
             originLayerNbt.putString("Origin", origin.getId().toString());
 
             originLayersNbt.add(originLayerNbt);

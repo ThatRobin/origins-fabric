@@ -9,7 +9,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
@@ -52,16 +52,22 @@ public class OriginArgumentType implements ArgumentType<Identifier> {
    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
 
       List<Identifier> availableOrigins = new ArrayList<>();
+      availableOrigins.add(Origin.EMPTY.getId());
 
       try {
-          Identifier originLayerId = context.getArgument("layer", Identifier.class);
-          OriginLayer originLayer = OriginLayers.getLayer(originLayerId);
 
-          availableOrigins.add(Origin.EMPTY.getId());
-          if (originLayer != null) availableOrigins.addAll(originLayer.getOrigins());
+          Identifier originLayerId = context.getArgument("layer", Identifier.class);
+          OriginLayer originLayer = OriginLayerManager.get(originLayerId);
+
+          if (originLayer != null) {
+             availableOrigins.addAll(originLayer.getOrigins());
+          }
+
       }
 
-      catch(IllegalArgumentException ignored) {}
+      catch (IllegalArgumentException ignored) {
+
+      }
 
       return CommandSource.suggestIdentifiers(availableOrigins.stream(), builder);
 

@@ -12,7 +12,7 @@ import io.github.apace100.origins.condition.factory.entity.OriginsEntityConditio
 import io.github.apace100.origins.networking.ModPackets;
 import io.github.apace100.origins.networking.ModPacketsC2S;
 import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginManager;
 import io.github.apace100.origins.power.factory.OriginsPowerTypes;
 import io.github.apace100.origins.registry.*;
@@ -100,7 +100,7 @@ public class Origins implements ModInitializer {
 		BadgeManager.init();
 
 		OriginManager originManager = new OriginManager();
-		OriginLayers originLayerManager = new OriginLayers();
+		OriginLayerManager originLayerManager = new OriginLayerManager();
 		IdentifiableResourceReloadListener badgeManager = BadgeManager.REGISTRY.getLoader();
 
 		PowerManager.DEPENDENCIES.add(badgeManager.getFabricId());

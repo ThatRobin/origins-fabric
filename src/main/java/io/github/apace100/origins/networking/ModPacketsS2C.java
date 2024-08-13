@@ -9,7 +9,7 @@ import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
 import io.github.apace100.origins.networking.packet.s2c.*;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import io.github.apace100.origins.screen.ChooseOriginScreen;
@@ -48,7 +48,7 @@ public class ModPacketsS2C {
 
         ClientPlayerEntity player = context.player();
 
-        OriginLayer layer = OriginLayers.getLayer(packet.layerId());
+        OriginLayer layer = OriginLayerManager.get(packet.layerId());
         Origin origin = OriginRegistry.get(packet.originId());
 
         OriginComponent component = ModComponents.ORIGIN.get(player);
@@ -71,7 +71,7 @@ public class ModPacketsS2C {
         List<OriginLayer> layers = new ArrayList<>();
         OriginComponent component = ModComponents.ORIGIN.get(context.player());
 
-        OriginLayers.getLayers()
+        OriginLayerManager.getLayers()
             .stream()
             .filter(ol -> ol.isEnabled() && !component.hasOrigin(ol))
             .forEach(layers::add);
@@ -103,8 +103,8 @@ public class ModPacketsS2C {
     @Environment(EnvType.CLIENT)
     private static void receiveLayerList(SyncOriginLayerRegistryS2CPacket packet, ClientPlayNetworking.Context context) {
 
-        OriginLayers.clear();
-        packet.layers().forEach(OriginLayers::register);
+        OriginLayerManager.clear();
+        packet.layersById().forEach(OriginLayerManager::register);
 
         OriginDataLoadedCallback.EVENT.invoker().onDataLoaded(true);
 

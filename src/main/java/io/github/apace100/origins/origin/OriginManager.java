@@ -63,13 +63,18 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 				int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
 
 				if (!OriginRegistry.contains(id)) {
+
+					origin.validate();
+
 					OriginRegistry.register(id, origin);
 					LOADING_PRIORITIES.put(id, currLoadingPriority);
+
 				}
 
 				else if (prevLoadingPriority < currLoadingPriority) {
 
 					Origins.LOGGER.warn("Overriding origin \"{}\" (with prev. loading priority of {}) with a higher loading priority of {} from data pack [{}]!", id, prevLoadingPriority, currLoadingPriority, packName);
+					origin.validate();
 
 					OriginRegistry.update(id, origin);
 					LOADING_PRIORITIES.put(id, currLoadingPriority);
@@ -83,10 +88,6 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 
 					if (Origins.config.isOriginDisabled(id)) {
 						OriginRegistry.remove(id);
-					}
-
-					else {
-						origin.validate();
 					}
 
 				}

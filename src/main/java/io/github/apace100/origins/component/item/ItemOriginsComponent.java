@@ -7,7 +7,7 @@ import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayers;
+import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginRegistry;
 import io.github.apace100.origins.registry.ModComponents;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
@@ -60,7 +60,7 @@ public class ItemOriginsComponent implements TooltipAppender {
                 continue;
             }
 
-            OriginLayer layer = OriginLayers.getLayer(entry.layerId());
+            OriginLayer layer = OriginLayerManager.get(entry.layerId());
             Origin origin = OriginRegistry.get(entry.originId());
 
             String translationKey;
@@ -102,20 +102,20 @@ public class ItemOriginsComponent implements TooltipAppender {
                 continue;
             }
 
-            originComponent.setOrigin(OriginLayers.getLayer(entry.layerId()), OriginRegistry.get(entry.originId()));
+            originComponent.setOrigin(OriginLayerManager.get(entry.layerId()), OriginRegistry.get(entry.originId()));
             assignedOrigin = true;
 
         }
 
         if (!assignedOrigin) {
-            OriginLayers.getLayers()
+            OriginLayerManager.getLayers()
                 .stream()
                 .filter(OriginLayer::isEnabled)
                 .forEach(layer -> originComponent.setOrigin(layer, Origin.EMPTY));
         }
 
         assignedOrigin |= originComponent.checkAutoChoosingLayers(player, false);
-        int originOptions = OriginLayers.getOriginOptionCount(player);
+        int originOptions = OriginLayerManager.getOriginOptionCount(player);
 
         originComponent.selectingOrigin(!assignedOrigin || originOptions > 0);
         originComponent.sync();
@@ -129,7 +129,7 @@ public class ItemOriginsComponent implements TooltipAppender {
     public record Entry(Identifier layerId, Identifier originId) {
 
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            OriginLayers.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
+            OriginLayerManager.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
             OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
 
@@ -141,7 +141,7 @@ public class ItemOriginsComponent implements TooltipAppender {
 
         public boolean canSelect() {
 
-            OriginLayer layer = OriginLayers.getNullableLayer(layerId);
+            OriginLayer layer = OriginLayerManager.getNullable(layerId);
             Origin origin = OriginRegistry.getNullable(originId);
 
             return layer != null
