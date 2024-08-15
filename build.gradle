@@ -80,20 +80,13 @@ dependencies {
 	modApi "io.github.apace100:apoli:${project.apoli_version}"
 	include "io.github.apace100:apoli:${project.apoli_version}"
 
-	modApi("dev.onyxstudios.cardinal-components-api:cardinal-components-base:${project.cca_version}") {
-		exclude(group: "net.fabricmc.fabric-api")
-	}
-	modApi("dev.onyxstudios.cardinal-components-api:cardinal-components-entity:${project.cca_version}") {
-		exclude(group: "net.fabricmc.fabric-api")
-	}
-
 	modApi("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
 
 	modCompileOnlyApi "carpet:fabric-carpet:${project.carpet_version}"
-
 	modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+
 }
 
 processResources {
