@@ -4,7 +4,7 @@
 	"green": {
 		"type": "apoli:overlay",
 		"hidden": true,
-		"texture": "minecraft:textures/misc/nausea.png",
+		"sprite": "*:*",
 		"red": 0.2,
 		"green": 0.4,
 		"blue": 0.2,
@@ -31,7 +31,7 @@
 	"orange": {
 		"type": "apoli:overlay",
 		"hidden": true,
-		"texture": "minecraft:textures/misc/nausea.png",
+		"sprite": "*:*",
 		"red": 0.3,
 		"green": 0.3,
 		"blue": 0.2,
@@ -63,7 +63,7 @@
 	"red": {
 		"type": "apoli:overlay",
 		"hidden": true,
-		"texture": "minecraft:textures/misc/nausea.png",
+		"sprite": "*:*",
 		"red": 0.4,
 		"green": 0.2,
 		"blue": 0.2,
