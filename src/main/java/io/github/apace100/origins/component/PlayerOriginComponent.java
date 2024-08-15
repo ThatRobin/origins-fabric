@@ -50,10 +50,13 @@ public class PlayerOriginComponent implements OriginComponent {
 
     @Override
     public void selectingOrigin(boolean selectingOrigin) {
+
         this.selectingOrigin = selectingOrigin;
-        if (selectingOrigin) {
+
+        if (selectingOrigin && !player.getWorld().isClient) {
             invulnerabilityTicks = 60;
         }
+
     }
 
     @Override
@@ -163,7 +166,7 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     @Override
-    public void tick() {
+    public void serverTick() {
         if (!selectingOrigin && invulnerabilityTicks > 0) {
             invulnerabilityTicks--;
         }

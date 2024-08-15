@@ -13,14 +13,14 @@ import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 import org.ladysnake.cca.api.v3.component.sync.AutoSyncedComponent;
-import org.ladysnake.cca.api.v3.component.tick.CommonTickingComponent;
+import org.ladysnake.cca.api.v3.component.tick.ServerTickingComponent;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public interface OriginComponent extends AutoSyncedComponent, CommonTickingComponent {
+public interface OriginComponent extends AutoSyncedComponent, ServerTickingComponent {
 
 	Map<OriginLayer, Origin> getOrigins();
 	Origin getOrigin(OriginLayer layer);
