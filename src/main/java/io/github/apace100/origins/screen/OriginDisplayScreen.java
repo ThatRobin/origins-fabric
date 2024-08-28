@@ -2,7 +2,6 @@ package io.github.apace100.origins.screen;
 
 import io.github.apace100.apoli.power.MultiplePower;
 import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.apoli.screen.widget.ScrollingTextWidget;
 import io.github.apace100.apoli.util.TextAlignment;
 import io.github.apace100.origins.Origins;
@@ -25,8 +24,10 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class OriginDisplayScreen extends Screen {
@@ -395,9 +396,9 @@ public class OriginDisplayScreen extends Screen {
                 int badgeOffsetX = 0;
                 int badgeOffsetY = 0;
 
-                for (Power subOrSelfPower : this.getSubPowersOrSelf(power, BadgeManager::hasPowerBadges)) {
+                for (Power selfOrSubPower : this.getSelfOrSubPowers(power, BadgeManager::hasPowerBadges)) {
 
-                    for (Badge badge : BadgeManager.getPowerBadges(subOrSelfPower.getId())) {
+                    for (Badge badge : BadgeManager.getPowerBadges(selfOrSubPower.getId())) {
 
                         int badgeX = badgeStartX + 10 * badgeOffsetX;
                         int badgeY = (y - 1) + 10 * badgeOffsetY;
@@ -414,7 +415,7 @@ public class OriginDisplayScreen extends Screen {
 
                         if (badgeY >= startY - 34 && badgeY <= endY + 12) {
 
-                            RenderedBadge renderedBadge = new RenderedBadge(subOrSelfPower, badge, badgeX, badgeY);
+                            RenderedBadge renderedBadge = new RenderedBadge(selfOrSubPower, badge, badgeX, badgeY);
                             renderedBadges.add(renderedBadge);
 
                             context.drawTexture(badge.spriteId(), renderedBadge.x, renderedBadge.y, -2, 0, 0, 9, 9, 9, 9);
@@ -449,21 +450,15 @@ public class OriginDisplayScreen extends Screen {
 
     }
 
-    protected final List<Power> getSubPowersOrSelf(Power power, Predicate<Power> selfPredicate) {
+    protected final Collection<? extends Power> getSelfOrSubPowers(Power power, Predicate<Power> selfPredicate) {
 
-        if (!(power instanceof MultiplePower multiplePower) || selfPredicate.test(multiplePower)) {
-            return List.of(power);
+        if (!selfPredicate.test(power) && power instanceof MultiplePower multiplePower) {
+            return multiplePower.getSubPowers();
         }
 
-        List<Power> subPowers = new LinkedList<>();
-
-        for (Identifier subPowerId : multiplePower.getSubPowers()) {
-            PowerManager
-                .getOptional(subPowerId)
-                .ifPresent(subPowers::add);
+        else {
+            return Set.of(power);
         }
-
-        return subPowers;
 
     }
 
