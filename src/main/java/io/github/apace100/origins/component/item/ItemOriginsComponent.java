@@ -1,8 +1,10 @@
 package io.github.apace100.origins.component.item;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.apace100.apoli.util.codec.SetCodec;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
 import io.github.apace100.origins.origin.Origin;
@@ -24,28 +26,28 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
+import java.util.Collection;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class ItemOriginsComponent implements TooltipAppender {
 
     public static final ItemOriginsComponent DEFAULT = new ItemOriginsComponent(new ObjectLinkedOpenHashSet<>());
 
-    public static final Codec<ItemOriginsComponent> CODEC = SetCodec.of(Entry.CODEC).xmap(
-        entries -> new ItemOriginsComponent(new ObjectLinkedOpenHashSet<>(entries)),
-        itemOriginsComponent -> itemOriginsComponent.entries
-    );
-    public static final PacketCodec<PacketByteBuf, ItemOriginsComponent> PACKET_CODEC = PacketCodecs.collection(
-        size -> new ObjectLinkedOpenHashSet<>(),
-        Entry.PACKET_CODEC
-    ).xmap(
+    public static final Codec<ItemOriginsComponent> CODEC = Entry.SET_CODEC.xmap(
         ItemOriginsComponent::new,
-        itemOriginsComponent -> itemOriginsComponent.entries
+        ItemOriginsComponent::entries
+    );
+
+    public static final PacketCodec<PacketByteBuf, ItemOriginsComponent> PACKET_CODEC = PacketCodecs.collection(ObjectLinkedOpenHashSet::new, Entry.PACKET_CODEC).xmap(
+        ItemOriginsComponent::new,
+		ItemOriginsComponent::entries
     );
 
     final ObjectLinkedOpenHashSet<Entry> entries;
 
-    ItemOriginsComponent(ObjectLinkedOpenHashSet<Entry> entries) {
-        this.entries = entries;
+    ItemOriginsComponent(Collection<Entry> entries) {
+        this.entries = new ObjectLinkedOpenHashSet<>(entries);
     }
 
     @Override
@@ -85,6 +87,10 @@ public class ItemOriginsComponent implements TooltipAppender {
             tooltip.accept(Text.translatable(baseKey + ".generic").formatted(Formatting.GRAY));
         }
 
+    }
+
+    private ObjectLinkedOpenHashSet<Entry> entries() {
+        return entries;
     }
 
     public void selectOrigins(LivingEntity user) {
@@ -128,7 +134,7 @@ public class ItemOriginsComponent implements TooltipAppender {
 
     public record Entry(Identifier layerId, Identifier originId) {
 
-        public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final MapCodec<Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             OriginLayerManager.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
             OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
@@ -137,6 +143,11 @@ public class ItemOriginsComponent implements TooltipAppender {
             Identifier.PACKET_CODEC, Entry::layerId,
             Identifier.PACKET_CODEC, Entry::originId,
             Entry::new
+        );
+
+        public static final Codec<Set<Entry>> SET_CODEC = MAP_CODEC.codec().listOf().xmap(
+            ImmutableSet::copyOf,
+            ImmutableList::copyOf
         );
 
         public boolean canSelect() {

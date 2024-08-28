@@ -35,10 +35,9 @@ public final class OriginsDataTypes {
             public <T> Pair<OriginLayer.ConditionedOrigin, T> strictDecode(DynamicOps<T> ops, T input) {
 
                 DataResult<String> inputString = ops.getStringValue(input);
-
                 if (inputString.isSuccess()) {
 
-                    Identifier originId = SerializableDataTypes.IDENTIFIER.strictParse(ops, ops.createString(inputString.getOrThrow()));
+                    Identifier originId = SerializableDataTypes.IDENTIFIER.strictParse(ops, inputString.map(ops::createString).getOrThrow());
                     OriginLayer.ConditionedOrigin conditionedOrigin = new OriginLayer.ConditionedOrigin(null, Lists.newArrayList(originId));
 
                     return new Pair<>(conditionedOrigin, input);
