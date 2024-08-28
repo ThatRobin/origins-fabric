@@ -129,7 +129,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
         }
 
-        grantPowersFromOrigin(origin, powerComponent);
+        PowerHolderComponent.grantPowers(player, Map.of(origin.getId(), origin.getPowers()), true);
         this.origins.put(layer, origin);
 
         if (this.hasAllOrigins()) {
@@ -140,10 +140,6 @@ public class PlayerOriginComponent implements OriginComponent {
             ChoseOriginCriterion.INSTANCE.trigger(spe, origin);
         }
 
-    }
-
-    private void grantPowersFromOrigin(Origin origin, PowerHolderComponent powerComponent) {
-        PowerHolderComponent.grantPower(player, Map.of(origin.getId(), origin.getPowers()), true);
     }
 
     private void revokeRemovedPowers(Origin origin, PowerHolderComponent powerComponent) {
@@ -236,7 +232,7 @@ public class PlayerOriginComponent implements OriginComponent {
         for (Origin origin : origins.values()) {
             //  Grant powers only if the player doesn't have them yet from the specific Origin source.
             //  Needed in case the origin was set before the update to Apoli happened.
-            grantPowersFromOrigin(origin, powerComponent);
+            PowerHolderComponent.grantPowers(player, Map.of(origin.getId(), origin.getPowers()), true);
         }
 
         for (Origin origin : origins.values()) {
