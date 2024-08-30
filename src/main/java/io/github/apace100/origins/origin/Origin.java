@@ -210,12 +210,13 @@ public class Origin implements Validatable {
     }
 
     public boolean hasPower(Power targetPower) {
-        return powers.contains(targetPower) && powers
+        return powers.contains(targetPower) || powers
             .stream()
             .filter(MultiplePower.class::isInstance)
             .map(MultiplePower.class::cast)
             .map(MultiplePower::getSubPowerIds)
-            .anyMatch(subPowerIds -> subPowerIds.contains(targetPower.getId()));
+            .flatMap(Collection::stream)
+            .anyMatch(targetPower.getId()::equals);
     }
 
 
