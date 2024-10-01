@@ -5,7 +5,7 @@ import io.github.apace100.apoli.mixin.EntityAccessor;
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.mixin.LivingEntityAccessor;
-import io.github.apace100.origins.registry.ModDamageSources;
+import io.github.apace100.origins.registry.ModDamageTypes;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
@@ -43,7 +43,7 @@ public class WaterBreathingPowerType extends PowerType {
                 }
 
                 entity.setAir(0);
-                entity.damage(ModDamageSources.getSource(entity.getDamageSources(), ModDamageSources.NO_WATER_FOR_GILLS), 2.0F);
+                entity.damage(entity.getDamageSources().create(ModDamageTypes.NO_WATER_FOR_GILLS), 2.0F);
 
                 for (int i = 0; i < 8; ++i) {
 
