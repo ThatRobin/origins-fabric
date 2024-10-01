@@ -21,7 +21,7 @@ public record OriginUpgrade(Identifier advancementCondition, Identifier upgradeT
             data.get("origin"),
             data.get("announcement")
         ),
-        (originUpgrade, data) -> data
+        (originUpgrade, serializableData) -> serializableData.instance()
             .set("condition", originUpgrade.advancementCondition())
             .set("origin", originUpgrade.upgradeToOrigin())
             .set("announcement", originUpgrade.announcement())

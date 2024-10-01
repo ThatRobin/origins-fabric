@@ -1,16 +1,17 @@
 package io.github.apace100.origins.origin;
 
-import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.github.apace100.apoli.condition.factory.ConditionTypeFactory;
 import io.github.apace100.apoli.data.ApoliDataTypes;
-import io.github.apace100.calio.Calio;
+import io.github.apace100.apoli.util.TextUtil;
 import io.github.apace100.calio.data.CompoundSerializableDataType;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.data.OriginsDataTypes;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
@@ -29,6 +30,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .add("id", SerializableDataTypes.IDENTIFIER)
             .addSupplied("order", SerializableDataTypes.INT, OriginLayerManager::size)
             .add("origins", OriginsDataTypes.ORIGINS_OR_CONDITIONED_ORIGINS)
+            .add("replace_origins", SerializableDataTypes.BOOLEAN, false)
             .add("replace", SerializableDataTypes.BOOLEAN, false)
             .add("enabled", SerializableDataTypes.BOOLEAN, true)
             .add("name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
@@ -41,43 +43,12 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .add("replace_exclude_random", SerializableDataTypes.BOOLEAN, false)
             .add("default_origin", SerializableDataTypes.IDENTIFIER, null)
             .add("auto_choose", SerializableDataTypes.BOOLEAN, false)
-            .add("hidden", SerializableDataTypes.BOOLEAN, false)
-            .postProcessor(data -> {
-
-                Identifier id = data.get("id");
-                String baseKey = Util.createTranslationKey("layer", id);
-
-                if (!data.isPresent("name")) {
-                    data.set("name", Text.translatable(baseKey + ".name"));
-                }
-
-                if (!data.isPresent("gui_title")) {
-
-                    Text name = data.get("name");
-
-                    Text viewOriginText = Text.translatable(Origins.MODID + ".gui.view_origin.title", name);
-                    Text chooseOriginText = Text.translatable(Origins.MODID + ".gui.choose_origin.title", name);
-
-                    data.set("gui_title", new GuiTitle(viewOriginText, chooseOriginText));
-
-                }
-
-                else {
-
-                    GuiTitle guiTitle = data.get("gui_title");
-
-                    Text viewOriginText = Optional.ofNullable(guiTitle.viewOrigin()).orElseGet(() -> Text.translatable(baseKey + ".view_origin.name"));
-                    Text chooseOriginText = Optional.ofNullable(guiTitle.chooseOrigin()).orElseGet(() -> Text.translatable(baseKey + ".choose_origin.name"));
-
-                    data.set("gui_title", new GuiTitle(viewOriginText, chooseOriginText));
-
-                }
-
-            }),
+            .add("hidden", SerializableDataTypes.BOOLEAN, false),
         data -> new OriginLayer(
             data.get("id"),
             data.get("order"),
             data.get("origins"),
+            data.get("replace_origins"),
             data.get("replace"),
             data.get("enabled"),
             data.get("name"),
@@ -92,20 +63,21 @@ public class OriginLayer implements Comparable<OriginLayer> {
             data.get("auto_choose"),
             data.get("hidden")
         ),
-        (layer, data) -> data
+        (layer, serializableData) -> serializableData.instance()
             .set("id", layer.getId())
             .set("order", layer.getOrder())
             .set("origins", layer.getConditionedOrigins())
+            .set("replace_origins", layer.shouldReplaceOrigins())
             .set("replace", layer.shouldReplace())
             .set("enabled", layer.isEnabled())
             .set("name", layer.getName())
-            .set("gui_title", layer.guiTitle)
+            .set("gui_title", layer.getGuiTitle())
             .set("missing_name", layer.getMissingName())
             .set("missing_description", layer.getMissingDescription())
             .set("allow_random", layer.isRandomAllowed())
-            .set("allow_random_unchoosable", layer.unchoosableRandomAllowed)
-            .set("exclude_random", layer.originsExcludedFromRandom)
-            .set("replace_exclude_random", layer.replaceOriginsExcludedFromRandom)
+            .set("allow_random_unchoosable", layer.isUnchoosableRandomAllowed())
+            .set("exclude_random", layer.getOriginsExcludedFromRandom())
+            .set("replace_exclude_random", layer.shouldReplaceExcludedOriginsFromRandom())
             .set("default_origin", layer.getDefaultOrigin())
             .set("auto_choose", layer.shouldAutoChoose())
             .set("hidden", layer.isHidden())
@@ -114,9 +86,10 @@ public class OriginLayer implements Comparable<OriginLayer> {
     private final Identifier id;
     private final int order;
 
-    private final List<ConditionedOrigin> origins;
+    private final Set<ConditionedOrigin> origins;
     private final boolean replaceOrigins;
 
+    private final boolean replace;
     private final boolean enabled;
 
     private final Text name;
@@ -130,7 +103,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     private final boolean randomAllowed;
     private final boolean unchoosableRandomAllowed;
 
-    private final List<Identifier> originsExcludedFromRandom;
+    private final Set<Identifier> originsExcludedFromRandom;
     private final boolean replaceOriginsExcludedFromRandom;
 
     @Nullable
@@ -139,31 +112,63 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
     private final boolean hidden;
 
-    protected OriginLayer(Identifier id, int order, List<ConditionedOrigin> origins, boolean replaceOrigins, boolean enabled, Text name, GuiTitle guiTitle, @Nullable Text missingName, @Nullable Text missingDescription, boolean randomAllowed, boolean unchoosableRandomAllowed, List<Identifier> originsExcludedFromRandom, boolean replaceOriginsExcludedFromRandom, @Nullable Identifier defaultOrigin, boolean autoChoose, boolean hidden) {
+    protected OriginLayer(Identifier id, int order, Collection<ConditionedOrigin> origins, boolean replaceOrigins, boolean replace, boolean enabled, @Nullable Text name, GuiTitle guiTitle, @Nullable Text missingName, @Nullable Text missingDescription, boolean randomAllowed, boolean unchoosableRandomAllowed, Collection<Identifier> originsExcludedFromRandom, boolean replaceOriginsExcludedFromRandom, @Nullable Identifier defaultOrigin, boolean autoChoose, boolean hidden) {
+
         this.id = id;
+        String baseTranslationKey = Util.createTranslationKey("layer", id);
+
         this.order = order;
-        this.origins = origins;
+        this.origins = new ObjectLinkedOpenHashSet<>(origins);
         this.replaceOrigins = replaceOrigins;
+        this.replace = replace;
         this.enabled = enabled;
-        this.name = name;
-        this.guiTitle = guiTitle;
+
+        this.name = TextUtil.forceTranslatable(baseTranslationKey + ".name", Optional.ofNullable(name));
+
+        if (guiTitle == null) {
+
+            Text viewOriginText = Text.translatable(Origins.MODID + ".gui.view_origin.title", this.name);
+            Text chooseOriginText = Text.translatable(Origins.MODID + ".gui.choose_origin.title", this.name);
+
+            this.guiTitle = new GuiTitle(viewOriginText, chooseOriginText);
+
+        }
+
+        else {
+
+            Text viewOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".view_origin.name", Optional.ofNullable(guiTitle.viewOrigin()));
+            Text chooseOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".choose_origin.name", Optional.ofNullable(guiTitle.chooseOrigin()));
+
+            this.guiTitle = new GuiTitle(viewOriginText, chooseOriginText);
+
+        }
+
         this.missingName = missingName;
         this.missingDescription = missingDescription;
         this.randomAllowed = randomAllowed;
         this.unchoosableRandomAllowed = unchoosableRandomAllowed;
-        this.originsExcludedFromRandom = originsExcludedFromRandom;
+        this.originsExcludedFromRandom = new ObjectLinkedOpenHashSet<>(originsExcludedFromRandom);
         this.replaceOriginsExcludedFromRandom = replaceOriginsExcludedFromRandom;
         this.defaultOrigin = defaultOrigin;
         this.autoChoose = autoChoose;
         this.hidden = hidden;
+
     }
 
     public int getOrder() {
         return order;
     }
 
-    public List<ConditionedOrigin> getConditionedOrigins() {
-        return origins;
+    public ImmutableList<ConditionedOrigin> getConditionedOrigins() {
+        return ImmutableList.copyOf(origins);
+    }
+
+    public ImmutableSet<Identifier> getOriginsExcludedFromRandom() {
+        return ImmutableSet.copyOf(originsExcludedFromRandom);
+    }
+
+    public GuiTitle getGuiTitle() {
+        return guiTitle;
     }
 
     public Text getName() {
@@ -189,6 +194,10 @@ public class OriginLayer implements Comparable<OriginLayer> {
     }
 
     public boolean shouldReplace() {
+        return replace;
+    }
+
+    public boolean shouldReplaceOrigins() {
         return replaceOrigins;
     }
 
@@ -273,6 +282,10 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return randomAllowed;
     }
 
+    public boolean isUnchoosableRandomAllowed() {
+        return unchoosableRandomAllowed;
+    }
+
     public boolean isHidden() {
         return hidden;
     }
@@ -286,43 +299,6 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .filter(oId -> !originsExcludedFromRandom.contains(oId))
             .filter(oid -> unchoosableRandomAllowed || OriginRegistry.get(oid).isChoosable())
             .collect(Collectors.toList());
-    }
-
-    public OriginLayer merge(OriginLayer otherLayer) {
-
-        Set<ConditionedOrigin> origins = new LinkedHashSet<>(this.getConditionedOrigins());
-        Set<Identifier> originsExcludedFromRandom = new LinkedHashSet<>(this.originsExcludedFromRandom);
-
-        if (otherLayer.shouldReplace()) {
-            origins.clear();
-        }
-
-        if (otherLayer.shouldReplaceExcludedOriginsFromRandom()) {
-            originsExcludedFromRandom.clear();
-        }
-
-        origins.addAll(otherLayer.getConditionedOrigins());
-        originsExcludedFromRandom.addAll(otherLayer.originsExcludedFromRandom);
-
-        return new OriginLayer(
-            this.getId(),
-            otherLayer.getOrder(),
-            new LinkedList<>(origins),
-            otherLayer.shouldReplace(),
-            otherLayer.isEnabled(),
-            otherLayer.getName(),
-            otherLayer.guiTitle,
-            otherLayer.getMissingName(),
-            otherLayer.getMissingDescription(),
-            otherLayer.isRandomAllowed(),
-            otherLayer.unchoosableRandomAllowed,
-            new LinkedList<>(originsExcludedFromRandom),
-            otherLayer.shouldReplaceExcludedOriginsFromRandom(),
-            otherLayer.getDefaultOrigin(),
-            otherLayer.shouldAutoChoose(),
-            otherLayer.isHidden()
-        );
-
     }
 
     @Override
@@ -362,11 +338,6 @@ public class OriginLayer implements Comparable<OriginLayer> {
             '}';
     }
 
-    public static OriginLayer fromJson(Identifier id, JsonObject jsonObject) {
-        jsonObject.addProperty("id", id.toString());
-        return DATA_TYPE.strictParse(Calio.wrapRegistryOps(JsonOps.INSTANCE), jsonObject);
-    }
-
     public record GuiTitle(@Nullable Text viewOrigin, @Nullable Text chooseOrigin) {
 
         public static final CompoundSerializableDataType<GuiTitle> DATA_TYPE = SerializableDataType.compound(
@@ -377,9 +348,9 @@ public class OriginLayer implements Comparable<OriginLayer> {
                 data.get("view_origin"),
                 data.get("choose_origin")
             ),
-            (guiTitle, data) -> data
+            (guiTitle, serializableData) -> serializableData.instance()
                 .set("view_origin", guiTitle.viewOrigin())
-                .set("choose_origin", guiTitle.viewOrigin)
+                .set("choose_origin", guiTitle.chooseOrigin())
         );
 
     }
@@ -394,7 +365,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
                 data.get("condition"),
                 data.get("origins")
             ),
-            (conditionedOrigin, data) -> data
+            (conditionedOrigin, serializableData) -> serializableData.instance()
                 .set("condition", conditionedOrigin.condition())
                 .set("origins", conditionedOrigin.origins())
         );

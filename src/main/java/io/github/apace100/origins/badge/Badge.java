@@ -40,7 +40,7 @@ public interface Badge extends DataObject<Badge> {
         DataObjectFactory<Badge> factory = this.getFactory();
         buf.writeIdentifier(this.getBadgeFactory().id());
 
-        factory.getData().send(buf, factory.toData(this));
+        factory.getSerializableData().send(buf, factory.toData(this));
 
     }
     

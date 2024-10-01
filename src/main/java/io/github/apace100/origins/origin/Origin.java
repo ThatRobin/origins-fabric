@@ -1,13 +1,11 @@
 package io.github.apace100.origins.origin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import io.github.apace100.apoli.data.ApoliDataTypes;
 import io.github.apace100.apoli.power.MultiplePower;
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.apoli.power.PowerReference;
-import io.github.apace100.calio.Calio;
+import io.github.apace100.apoli.util.TextUtil;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
@@ -15,6 +13,8 @@ import io.github.apace100.calio.util.Validatable;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.data.OriginsDataTypes;
 import io.github.apace100.origins.registry.ModComponents;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -24,6 +24,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -34,49 +35,28 @@ public class Origin implements Validatable {
         new SerializableData()
             .add("id", SerializableDataTypes.IDENTIFIER)
             .add("icon", SerializableDataTypes.UNCOUNTED_ITEM_STACK, ItemStack.EMPTY)
-            .addSupplied("powers", ApoliDataTypes.POWER_REFERENCE.listOf(), ArrayList::new)
-            .addSupplied("upgrades", OriginsDataTypes.UPGRADES, ArrayList::new)
+            .add("powers", ApoliDataTypes.POWER_REFERENCE.list(), new ObjectArrayList<>())
+            .add("upgrades", OriginsDataTypes.UPGRADES, new ObjectArrayList<>())
             .add("impact", OriginsDataTypes.IMPACT, Impact.NONE)
-            .add("name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
-            .add("description", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
+            .add("name", SerializableDataTypes.TEXT, null)
+            .add("description", SerializableDataTypes.TEXT, null)
             .add("unchoosable", SerializableDataTypes.BOOLEAN, false)
-            .add("order", SerializableDataTypes.INT, Integer.MAX_VALUE)
-            .postProcessor(data -> {
-
-                Identifier id = data.get("id");
-                String baseKey = Util.createTranslationKey("origin", id);
-
-                if (!data.isPresent("name")) {
-                    data.set("name", Text.translatable(baseKey + ".name"));
-                }
-
-                if (!data.isPresent("description")) {
-                    data.set("description", Text.translatable(baseKey + ".description"));
-                }
-
-            }),
-        data -> {
-            ItemStack iconStack = data.get("icon");
-            return new Origin(
-                data.get("id"),
-                iconStack.copy(),
-                data.get("powers"),
-                data.get("upgrades"),
-                data.get("impact"),
-                data.get("name"),
-                data.get("description"),
-                data.get("unchoosable"),
-                data.get("order")
-            );
-        },
-        (origin, data) -> data
+            .add("order", SerializableDataTypes.INT, Integer.MAX_VALUE),
+        data -> new Origin(
+            data.get("id"),
+            data.get("icon"),
+            data.get("powers"),
+            data.get("upgrades"),
+            data.get("impact"),
+            data.get("name"),
+            data.get("description"),
+            data.get("unchoosable"),
+            data.get("order")
+        ),
+        (origin, serializableData) -> serializableData.instance()
             .set("id", origin.getId())
             .set("icon", origin.getDisplayItem())
-            .set("powers", origin.getPowers()
-                .stream()
-                .map(Power::getId)
-                .map(PowerReference::new)
-                .toList())
+            .set("powers", origin.getPowerReferences())
             .set("upgrades", origin.upgrades)
             .set("impact", origin.getImpact())
             .set("name", origin.getName())
@@ -89,9 +69,10 @@ public class Origin implements Validatable {
     private final Identifier id;
     private final ItemStack displayItem;
 
-    private final List<Power> powers;
-    private final List<OriginUpgrade> upgrades;
+    private final Set<PowerReference> powerReferences;
+    private final Set<Power> powers;
 
+    private final List<OriginUpgrade> upgrades;
     private final Impact impact;
 
     private final Text name;
@@ -102,36 +83,30 @@ public class Origin implements Validatable {
 
     private final int order;
 
-    protected Origin(Identifier id, ItemStack icon, List<Power> powers, List<OriginUpgrade> upgrades, Impact impact, Text name, Text description, boolean unchoosable, boolean special, int order) {
+    protected Origin(Identifier id, ItemStack icon, List<PowerReference> powerReferences, List<OriginUpgrade> upgrades, Impact impact, @Nullable Text name, @Nullable Text description, boolean unchoosable, boolean special, int order) {
+
         this.id = id;
-        this.displayItem = icon;
-        this.powers = new LinkedList<>(powers);
+        String baseTranslationKey = Util.createTranslationKey("origin", id);
+
+        this.displayItem = icon.copy();
+        this.powerReferences = new ObjectLinkedOpenHashSet<>(powerReferences);
+        this.powers = new ObjectLinkedOpenHashSet<>();
         this.upgrades = upgrades;
         this.impact = impact;
-        this.name = name;
-        this.description = description;
+        this.name = TextUtil.forceTranslatable(baseTranslationKey + ".name", Optional.ofNullable(name));
+        this.description = TextUtil.forceTranslatable(baseTranslationKey + ".description", Optional.ofNullable(description));
         this.choosable = !unchoosable;
         this.special = special;
         this.order = order;
+
     }
 
-    public Origin(Identifier id, ItemStack icon, List<Power> powers, List<OriginUpgrade> upgrades, Impact impact, Text name, Text description, boolean unchoosable, int order) {
-        this(id, icon, powers, upgrades, impact, name, description, unchoosable, false, order);
+    public Origin(Identifier id, ItemStack icon, List<PowerReference> powerReferences, List<OriginUpgrade> upgrades, Impact impact, @Nullable Text name, @Nullable Text description, boolean unchoosable, int order) {
+        this(id, icon, powerReferences, upgrades, impact, name, description, unchoosable, false, order);
     }
 
     public static Origin special(Identifier id, ItemStack icon, Impact impact, int order) {
-        String baseKey = Util.createTranslationKey("origin", id);
-        return new Origin(
-            id, icon,
-            new LinkedList<>(),
-            new LinkedList<>(),
-            impact,
-            Text.translatable(baseKey + ".name"),
-            Text.translatable(baseKey + ".description"),
-            true,
-            true,
-            order
-        );
+        return new Origin(id, icon, new LinkedList<>(), new LinkedList<>(), impact, null, null, true, true, order);
     }
 
     public Identifier getId() {
@@ -140,6 +115,10 @@ public class Origin implements Validatable {
 
     public ItemStack getDisplayItem() {
         return displayItem;
+    }
+
+    public ImmutableList<PowerReference> getPowerReferences() {
+        return ImmutableList.copyOf(powerReferences);
     }
 
     public ImmutableList<Power> getPowers() {
@@ -185,27 +164,18 @@ public class Origin implements Validatable {
     @Override
     public void validate() {
 
-        List<Power> validatedPowers = new LinkedList<>();
-        for (Power power : powers) {
+        this.powers.clear();
+        for (PowerReference powerReference : powerReferences) {
 
-            Identifier powerId = power.getId();
-
-            if (power instanceof PowerReference reference) {
-                power = reference.getReference();
+            try {
+                powers.add(powerReference.getStrictReference());
             }
 
-            if (power == null) {
-                Origins.LOGGER.error("Origin \"{}\" contained unregistered power \"{}\"!", id, powerId);
-            }
-
-            else if (!Origins.config.isPowerDisabled(id, powerId)) {
-                validatedPowers.add(power);
+            catch (Exception e) {
+                Origins.LOGGER.error("Origin \"{}\" contained unregistered power \"{}\"!", id, powerReference.getId());
             }
 
         }
-
-        this.powers.clear();
-        this.powers.addAll(validatedPowers);
 
     }
 
@@ -226,15 +196,6 @@ public class Origin implements Validatable {
 
     public void send(RegistryByteBuf buf) {
         DATA_TYPE.send(buf, this);
-    }
-
-    public static Origin fromJson(Identifier id, JsonObject jsonObject) {
-        jsonObject.addProperty("id", id.toString());
-        return DATA_TYPE.strictParse(Calio.wrapRegistryOps(JsonOps.INSTANCE), jsonObject);
-    }
-
-    public JsonObject toJson() {
-        return DATA_TYPE.strictEncodeStart(JsonOps.INSTANCE, this).getAsJsonObject();
     }
 
     @Override

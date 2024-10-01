@@ -1,5 +1,8 @@
 package io.github.apace100.origins.component;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.mojang.serialization.JsonOps;
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.apoli.power.PowerManager;
@@ -14,6 +17,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.registry.RegistryOps;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
@@ -110,20 +114,18 @@ public class PlayerOriginComponent implements OriginComponent {
         }
 
         PowerHolderComponent powerComponent = PowerHolderComponent.KEY.get(player);
+        RegistryOps<JsonElement> jsonOps = player.getRegistryManager().getOps(JsonOps.INSTANCE);
 
         if (oldOrigin != null) {
 
+            JsonElement oldOriginJson = Origin.DATA_TYPE.write(jsonOps, oldOrigin).getOrThrow(JsonParseException::new);
+            JsonElement originJson = Origin.DATA_TYPE.write(jsonOps, origin).getOrThrow(JsonParseException::new);
+
             if (!oldOrigin.getId().equals(origin.getId())) {
-
-                int removedPowers = powerComponent.removeAllPowersFromSource(oldOrigin.getId());
-
-                if (removedPowers > 0) {
-                    PowerHolderComponent.PacketHandlers.REVOKE_ALL_POWERS.sync(player, List.of(oldOrigin.getId()));
-                }
-
+                PowerHolderComponent.revokeAllPowersFromSource(player, oldOrigin.getId(), true);
             }
 
-            else if (!oldOrigin.toJson().equals(origin.toJson())) {
+            else if (!oldOriginJson.equals(originJson)) {
                 revokeRemovedPowers(origin, powerComponent);
             }
 

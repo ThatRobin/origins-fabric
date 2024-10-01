@@ -4,13 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.mojang.serialization.JsonOps;
 import io.github.apace100.apoli.power.PowerManager;
+import io.github.apace100.calio.CalioServer;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.Origins;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.util.Identifier;
@@ -42,8 +45,16 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 	@Override
 	protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
 
+		Origins.LOGGER.info("Reading origins from data packs...");
+
 		LOADING_PRIORITIES.clear();
 		OriginRegistry.reset();
+
+		DynamicRegistryManager dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
+		if (dynamicRegistries == null) {
+			Origins.LOGGER.error("Can't read origins from data packs without access to dynamic registries!");
+			return;
+		}
 
 		AtomicBoolean hasConfigChanged = new AtomicBoolean(false);
 		prepared.forEach((packName, id, jsonElement) -> {
@@ -54,10 +65,11 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 				SerializableData.CURRENT_PATH = id.getPath();
 
 				if (!(jsonElement instanceof JsonObject jsonObject)) {
-					throw new JsonSyntaxException("Expected a JSON object");
+					throw new JsonSyntaxException("Not a JSON object: " + jsonElement);
 				}
 
-				Origin origin = Origin.fromJson(id, jsonObject);
+				jsonObject.addProperty("id", id.toString());
+				Origin origin = Origin.DATA_TYPE.read(dynamicRegistries.getOps(JsonOps.INSTANCE), jsonObject).getOrThrow();
 
 				int prevLoadingPriority = LOADING_PRIORITIES.computeIfAbsent(id, k -> 0);
 				int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
@@ -81,26 +93,22 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 
 				}
 
-				else  {
+				origin = OriginRegistry.get(id);
+				hasConfigChanged.set(hasConfigChanged.get() | Origins.config.addToConfig(origin));
 
-					origin = OriginRegistry.get(id);
-					hasConfigChanged.set(hasConfigChanged.get() | Origins.config.addToConfig(origin));
-
-					if (Origins.config.isOriginDisabled(id)) {
-						OriginRegistry.remove(id);
-					}
-
+				if (Origins.config.isOriginDisabled(id)) {
+					OriginRegistry.remove(id);
 				}
 
 			}
 
 			catch (Exception e) {
-				Origins.LOGGER.error("There was a problem reading origin file \"{}\" (skipping): {}", id, e.getMessage());
+				Origins.LOGGER.error("There was a problem reading origin \"{}\": {}", id, e.getMessage());
 			}
 
 		});
 
-		Origins.LOGGER.info("Finished loading origins from data files. Registry contains {} origins.", OriginRegistry.size());
+		Origins.LOGGER.info("Finished reading origins from data packs. Registry contains {} origins.", OriginRegistry.size());
 		if (hasConfigChanged.get()) {
 			Origins.serializeConfig();
 		}

@@ -15,11 +15,7 @@ import io.github.apace100.origins.integration.AutoBadgeCallback;
 import io.github.apace100.origins.networking.packet.s2c.SyncBadgeRegistryS2CPacket;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.recipe.CraftingRecipe;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.recipe.ShapedRecipe;
-import net.minecraft.recipe.input.RecipeInput;
+import net.minecraft.recipe.*;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -28,9 +24,9 @@ import java.util.*;
 
 public final class BadgeManager {
 
-    public static final DataObjectRegistry<Badge> REGISTRY = new DataObjectRegistry.Builder<>(Origins.identifier("badge"), Badge.class)
+    public static final DataObjectRegistry<Badge> REGISTRY = new DataObjectRegistry.Builder<Badge>(Origins.identifier("badge"))
         .readFromData("badges", true)
-        .dataErrorHandler((id, exception) -> Origins.LOGGER.error("Failed to read badge " + id + ", caused by", exception))
+        .dataErrorHandler((id, packName, exception) -> Origins.LOGGER.error("Error trying to read badge \"" + id + "\" from data pack [" + packName + "]: " + exception))
         .defaultFactory(BadgeFactories.KEYBIND)
         .buildAndRegister();
     public static final Identifier PHASE = Origins.identifier("phase/badge_manager");
@@ -163,43 +159,56 @@ public final class BadgeManager {
 
     public static void createAutoBadges(Identifier powerId, Power power, List<Badge> badgeList) {
 
-        PowerType powerType = power.create(null);
+        switch (power.create(null)) {
+            case Active active -> {
 
-        if (powerType instanceof Active active) {
+                boolean toggle = active instanceof TogglePowerType
+                    || active instanceof ToggleNightVisionPowerType;
+                Identifier autoBadgeId = toggle
+                    ? TOGGLE_BADGE_ID
+                    : ACTIVE_BADGE_ID;
 
-            boolean toggle = active instanceof TogglePowerType || active instanceof ToggleNightVisionPowerType;
-            Identifier autoBadgeId = toggle ? TOGGLE_BADGE_ID : ACTIVE_BADGE_ID;
+                if (REGISTRY.containsId(autoBadgeId)) {
+                    badgeList.add(REGISTRY.get(autoBadgeId));
+                }
 
-            if (REGISTRY.containsId(autoBadgeId)) {
-                badgeList.add(REGISTRY.get(autoBadgeId));
-            } else {
+                else {
 
-                Identifier spriteId = toggle ? TOGGLE_BADGE_SPRITE : ACTIVE_BADGE_SPRITE;
-                String key = toggle ? "origins.gui.badge.toggle" : "origins.gui.badge.active";
+                    Identifier spriteId = toggle
+                        ? TOGGLE_BADGE_SPRITE
+                        : ACTIVE_BADGE_SPRITE;
+                    String key = toggle
+                        ? "origins.gui.badge.toggle"
+                        : "origins.gui.badge.active";
 
-                badgeList.add(new KeybindBadge(spriteId, key));
+                    badgeList.add(new KeybindBadge(spriteId, key));
+
+                }
 
             }
+            case RecipePowerType recipePowerType -> {
 
-        } else if (powerType instanceof RecipePowerType recipePowerType) {
+                CraftingRecipe craftingRecipe = recipePowerType.getRecipe();
+                String type = switch (craftingRecipe) {
+                    case ShapedRecipe ignored ->
+                        "shaped";
+                    case ShapelessRecipe ignored ->
+                        "shapeless";
+                    default ->
+                        "unknown";
+                };
 
-            RecipeEntry<Recipe<? extends RecipeInput>> entry = recipePowerType.getRecipe();
-            if (!(entry.value() instanceof CraftingRecipe craftingRecipe)) {
-                return;
+                badgeList.add(new CraftingRecipeBadge(
+                    RECIPE_BADGE_SPRITE,
+                    new RecipeEntry<>(powerId, craftingRecipe),
+                    Text.translatable("origins.gui.badge.recipe.crafting." + type),
+                    null
+                ));
+
             }
+            default -> {
 
-            String type = craftingRecipe instanceof ShapedRecipe
-                ? "shaped"
-                : "shapeless";
-            CraftingRecipeBadge badge = new CraftingRecipeBadge(
-                RECIPE_BADGE_SPRITE,
-                new RecipeEntry<>(entry.id(), craftingRecipe),
-                Text.translatable("origins.gui.badge.recipe.crafting." + type),
-                null
-            );
-
-            badgeList.add(badge);
-
+            }
         }
 
     }

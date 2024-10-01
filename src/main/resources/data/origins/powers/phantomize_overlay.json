@@ -2,7 +2,7 @@
 	"type": "apoli:multiple",
 	"hidden": true,
 	"green": {
-		"type": "apoli:overlay",
+		"type": "origins:overlay",
 		"hidden": true,
 		"sprite": "*:*",
 		"red": 0.2,
@@ -14,7 +14,7 @@
 		"visible_in_third_person": true,
 		"hide_with_hud": true,
 		"condition": {
-			"type": "apoli:and",
+			"type": "origins:all_of",
 			"conditions": [
 				{
 					"type": "apoli:power_active",
@@ -29,7 +29,7 @@
 		}
 	},
 	"orange": {
-		"type": "apoli:overlay",
+		"type": "origins:overlay",
 		"hidden": true,
 		"sprite": "*:*",
 		"red": 0.3,
@@ -41,7 +41,7 @@
 		"visible_in_third_person": true,
 		"hide_with_hud": true,
 		"condition": {
-			"type": "apoli:and",
+			"type": "origins:all_of",
 			"conditions": [
 				{
 					"type": "apoli:power_active",
@@ -61,7 +61,7 @@
 		}
 	},
 	"red": {
-		"type": "apoli:overlay",
+		"type": "origins:overlay",
 		"hidden": true,
 		"sprite": "*:*",
 		"red": 0.4,
@@ -73,7 +73,7 @@
 		"visible_in_third_person": true,
 		"hide_with_hud": true,
 		"condition": {
-			"type": "apoli:and",
+			"type": "origins:all_of",
 			"conditions": [
 				{
 					"type": "apoli:power_active",

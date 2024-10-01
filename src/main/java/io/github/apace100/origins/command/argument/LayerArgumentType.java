@@ -16,7 +16,7 @@ import net.minecraft.util.Identifier;
 
 import java.util.concurrent.CompletableFuture;
 
-public class LayerArgumentType implements ArgumentType<Identifier> {
+public class LayerArgumentType implements ArgumentType<OriginLayer> {
 
    public static final DynamicCommandExceptionType LAYER_NOT_FOUND = new DynamicCommandExceptionType(
        o -> Text.translatable("commands.origin.layer_not_found", o)
@@ -26,22 +26,16 @@ public class LayerArgumentType implements ArgumentType<Identifier> {
       return new LayerArgumentType();
    }
 
-   public Identifier parse(StringReader stringReader) throws CommandSyntaxException {
-      return Identifier.fromCommandInput(stringReader);
+   public static OriginLayer getLayer(CommandContext<ServerCommandSource> context, String argumentName) {
+      return context.getArgument(argumentName, OriginLayer.class);
    }
 
-   public static OriginLayer getLayer(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
-
-      Identifier id = context.getArgument(argumentName, Identifier.class);
-
-      try {
-         return OriginLayerManager.get(id);
-      }
-
-      catch(IllegalArgumentException e) {
-         throw LAYER_NOT_FOUND.create(id);
-      }
-
+   @Override
+   public OriginLayer parse(StringReader reader) throws CommandSyntaxException {
+      Identifier id = Identifier.fromCommandInputNonEmpty(reader);
+      return OriginLayerManager.getResult(id)
+          .result()
+          .orElseThrow(() -> LAYER_NOT_FOUND.create(id));
    }
 
    @Override

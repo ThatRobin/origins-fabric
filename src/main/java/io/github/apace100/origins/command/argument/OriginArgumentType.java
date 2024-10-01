@@ -7,20 +7,16 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayerManager;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
-public class OriginArgumentType implements ArgumentType<Identifier> {
+public class OriginArgumentType implements ArgumentType<Origin> {
 
    public static final DynamicCommandExceptionType ORIGIN_NOT_FOUND = new DynamicCommandExceptionType(
        o -> Text.translatable("commands.origin.origin_not_found", o)
@@ -30,46 +26,36 @@ public class OriginArgumentType implements ArgumentType<Identifier> {
       return new OriginArgumentType();
    }
 
-   public Identifier parse(StringReader stringReader) throws CommandSyntaxException {
-      return Identifier.fromCommandInput(stringReader);
+   public static Origin getOrigin(CommandContext<ServerCommandSource> context, String argumentName) {
+      return context.getArgument(argumentName, Origin.class);
    }
 
-   public static Origin getOrigin(CommandContext<ServerCommandSource> context, String argumentName) throws CommandSyntaxException {
-
-      Identifier id = context.getArgument(argumentName, Identifier.class);
-
-      try {
-         return OriginRegistry.get(id);
-      }
-
-      catch(IllegalArgumentException e) {
-         throw ORIGIN_NOT_FOUND.create(id);
-      }
-
+   @Override
+   public Origin parse(StringReader reader) throws CommandSyntaxException {
+      Identifier id =  Identifier.fromCommandInputNonEmpty(reader);
+      return OriginRegistry.getResult(id)
+          .result()
+          .orElseThrow(() -> ORIGIN_NOT_FOUND.create(id));
    }
 
    @Override
    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
 
-      List<Identifier> availableOrigins = new ArrayList<>();
-      availableOrigins.add(Origin.EMPTY.getId());
-
       try {
 
-          Identifier originLayerId = context.getArgument("layer", Identifier.class);
-          OriginLayer originLayer = OriginLayerManager.get(originLayerId);
+         OriginLayer layer = context.getArgument("layer", OriginLayer.class);
+         Stream.Builder<Identifier> origins = Stream.builder();
 
-          if (originLayer != null) {
-             availableOrigins.addAll(originLayer.getOrigins());
-          }
+         origins.add(Origin.EMPTY.getId());
+         layer.getOrigins().forEach(origins);
 
-      }
-
-      catch (IllegalArgumentException ignored) {
+         return CommandSource.suggestIdentifiers(origins.build(), builder);
 
       }
 
-      return CommandSource.suggestIdentifiers(availableOrigins.stream(), builder);
+      catch (Exception e) {
+         return CommandSource.suggestIdentifiers(Stream.of(), builder);
+      }
 
    }
 

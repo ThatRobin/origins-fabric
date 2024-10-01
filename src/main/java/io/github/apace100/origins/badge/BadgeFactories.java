@@ -27,7 +27,7 @@ public final class BadgeFactories {
     public static final BadgeFactory CRAFTING_RECIPE = new BadgeFactory(Origins.identifier("crafting_recipe"),
         new SerializableData()
             .add("sprite", SerializableDataTypes.IDENTIFIER)
-            .add("recipe", SerializableDataTypes.RECIPE)
+            .add("recipe", SerializableDataTypes.RECIPE_ENTRY)
             .add("prefix", SerializableDataTypes.TEXT, null)
             .add("suffix", SerializableDataTypes.TEXT, null),
         CraftingRecipeBadge::new);

@@ -7,21 +7,21 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
-public record BadgeFactory(Identifier id, SerializableData data, Function<SerializableData.Instance, Badge> factory) implements DataObjectFactory<Badge> {
+public record BadgeFactory(Identifier id, SerializableData serializableData, Function<SerializableData.Instance, Badge> factory) implements DataObjectFactory<Badge> {
 
     @Override
-    public SerializableData getData() {
-        return data;
+    public SerializableData getSerializableData() {
+        return serializableData();
     }
 
     @Override
     public Badge fromData(SerializableData.Instance instance) {
-        return factory.apply(instance);
+        return factory().apply(instance);
     }
 
     @Override
-    public SerializableData.Instance toData(Badge badge) {
-        return badge.toData(data.new Instance());
+    public Instance toData(Badge badge, SerializableData serializableData) {
+        return badge.toData(serializableData.instance());
     }
 
 }
