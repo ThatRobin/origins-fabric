@@ -2,7 +2,7 @@ package io.github.apace100.origins.networking;
 
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.component.OriginComponent;
-import io.github.apace100.origins.networking.packet.OriginsInstalledS2CPacket;
+import io.github.apace100.origins.networking.packet.s2c.OriginsInstalledS2CPacket;
 import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseRandomOriginC2SPacket;

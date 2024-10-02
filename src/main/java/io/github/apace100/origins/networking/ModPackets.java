@@ -3,7 +3,7 @@ package io.github.apace100.origins.networking;
 import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseRandomOriginC2SPacket;
-import io.github.apace100.origins.networking.packet.OriginsInstalledS2CPacket;
+import io.github.apace100.origins.networking.packet.s2c.OriginsInstalledS2CPacket;
 import io.github.apace100.origins.networking.packet.s2c.*;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 

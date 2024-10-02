@@ -1,4 +1,4 @@
-package io.github.apace100.origins.networking.packet;
+package io.github.apace100.origins.networking.packet.s2c;
 
 import io.github.apace100.origins.Origins;
 import io.netty.buffer.ByteBuf;

@@ -5,7 +5,7 @@ import io.github.apace100.origins.OriginsClient;
 import io.github.apace100.origins.badge.BadgeManager;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
-import io.github.apace100.origins.networking.packet.OriginsInstalledS2CPacket;
+import io.github.apace100.origins.networking.packet.s2c.OriginsInstalledS2CPacket;
 import io.github.apace100.origins.networking.packet.s2c.*;
 import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
