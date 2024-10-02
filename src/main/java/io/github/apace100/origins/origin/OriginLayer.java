@@ -1,7 +1,6 @@
 package io.github.apace100.origins.origin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.github.apace100.apoli.condition.factory.ConditionTypeFactory;
 import io.github.apace100.apoli.data.ApoliDataTypes;
 import io.github.apace100.apoli.util.TextUtil;
@@ -33,10 +32,10 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .add("replace_origins", SerializableDataTypes.BOOLEAN, false)
             .add("replace", SerializableDataTypes.BOOLEAN, false)
             .add("enabled", SerializableDataTypes.BOOLEAN, true)
-            .add("name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
+            .add("name", SerializableDataTypes.TEXT, null)
             .add("gui_title", OriginsDataTypes.GUI_TITLE, null)
-            .add("missing_name", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
-            .add("missing_description", ApoliDataTypes.DEFAULT_TRANSLATABLE_TEXT, null)
+            .add("missing_name", SerializableDataTypes.TEXT, null)
+            .add("missing_description", SerializableDataTypes.TEXT, null)
             .add("allow_random", SerializableDataTypes.BOOLEAN, false)
             .add("allow_random_unchoosable", SerializableDataTypes.BOOLEAN, false)
             .add("exclude_random", SerializableDataTypes.IDENTIFIERS, new LinkedList<>())
@@ -163,8 +162,8 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return ImmutableList.copyOf(origins);
     }
 
-    public ImmutableSet<Identifier> getOriginsExcludedFromRandom() {
-        return ImmutableSet.copyOf(originsExcludedFromRandom);
+    public ImmutableList<Identifier> getOriginsExcludedFromRandom() {
+        return ImmutableList.copyOf(originsExcludedFromRandom);
     }
 
     public GuiTitle getGuiTitle() {
