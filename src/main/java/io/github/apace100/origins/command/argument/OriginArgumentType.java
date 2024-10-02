@@ -33,8 +33,8 @@ public class OriginArgumentType implements ArgumentType<Origin> {
    @Override
    public Origin parse(StringReader reader) throws CommandSyntaxException {
       Identifier id =  Identifier.fromCommandInputNonEmpty(reader);
-      return OriginRegistry.getResult(id)
-          .result()
+      return OriginManager
+          .getOptional(id)
           .orElseThrow(() -> ORIGIN_NOT_FOUND.create(id));
    }
 

@@ -40,7 +40,7 @@ public class LayerArgumentType implements ArgumentType<OriginLayer> {
 
    @Override
    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-      return CommandSource.suggestIdentifiers(OriginLayerManager.getLayers().stream().filter(OriginLayer::isEnabled).map(OriginLayer::getId), builder);
+      return CommandSource.suggestIdentifiers(OriginLayerManager.values().stream().filter(OriginLayer::isEnabled).map(OriginLayer::getId), builder);
    }
 
 }

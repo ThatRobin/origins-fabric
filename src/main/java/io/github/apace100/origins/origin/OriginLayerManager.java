@@ -1,7 +1,6 @@
 package io.github.apace100.origins.origin;
 
 import com.google.gson.*;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import io.github.apace100.apoli.util.PrioritizedEntry;
@@ -14,23 +13,26 @@ import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.integration.CarpetIntegration;
 import io.github.apace100.origins.integration.OriginDataLoadedCallback;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
-import io.github.apace100.origins.networking.packet.s2c.SyncOriginLayerRegistryS2CPacket;
+import io.github.apace100.origins.networking.packet.s2c.SyncOriginLayersS2CPacket;
 import io.github.apace100.origins.registry.ModComponents;
-import io.netty.buffer.ByteBuf;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.RegistryOps;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.JsonHelper;
+import net.minecraft.util.Util;
 import net.minecraft.util.profiler.Profiler;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,20 +44,12 @@ import java.util.stream.IntStream;
 
 public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
 
-    public static final Identifier PHASE = Origins.identifier("phase/origin_layers");
-    public static final Codec<Identifier> VALIDATING_CODEC = Identifier.CODEC.comapFlatMap(
-        id -> contains(id)
-            ? DataResult.success(id)
-            : DataResult.error(() -> "Could not get layer from id '" + id + "', as it doesn't exist!"),
-        id -> id
-    );
+    public static final Set<Identifier> DEPENDENCIES = Util.make(new ObjectOpenHashSet<>(), set -> set.add(OriginManager.ID));
+    public static final Identifier ID = Origins.identifier("origin_layers");
 
-    public static final PacketCodec<ByteBuf, OriginLayer> DISPATCH_PACKET_CODEC = Identifier.PACKET_CODEC.xmap(OriginLayerManager::get, OriginLayer::getId);
-    public static final Codec<OriginLayer> DISPATCH_CODEC = Identifier.CODEC.comapFlatMap(OriginLayerManager::getResult, OriginLayer::getId);
+    private static final Object2ObjectOpenHashMap<Identifier, OriginLayer> LAYERS_BY_ID = new Object2ObjectOpenHashMap<>();
 
     private static final Map<Identifier, Integer> LOADING_PRIORITIES = new HashMap<>();
-    private static final Map<Identifier, OriginLayer> LAYERS = new HashMap<>();
-
     private static final Gson GSON = new GsonBuilder()
         .disableHtmlEscaping()
         .setPrettyPrinting()
@@ -63,16 +57,16 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
     public OriginLayerManager() {
         super(GSON, "origin_layers", ResourceType.SERVER_DATA);
-        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(OriginManager.PHASE, PHASE);
-        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(PHASE, (player, joined) -> {
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(OriginManager.ID, ID);
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(ID, (player, joined) -> {
 
             OriginComponent component = ModComponents.ORIGIN.get(player);
-            getLayers().stream()
+            values().stream()
                 .filter(OriginLayer::isEnabled)
                 .filter(Predicate.not(component::hasOrigin))
                 .forEach(layer -> component.setOrigin(layer, Origin.EMPTY));
 
-            ServerPlayNetworking.send(player, new SyncOriginLayerRegistryS2CPacket(LAYERS));
+            send(player);
             updateData(player, joined);
 
         });
@@ -80,10 +74,10 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
     private void updateData(ServerPlayerEntity player, boolean init) {
 
-        OriginComponent component = ModComponents.ORIGIN.get(player);
         RegistryOps<JsonElement> jsonOps = player.getRegistryManager().getOps(JsonOps.INSTANCE);
+        OriginComponent component = ModComponents.ORIGIN.get(player);
 
-        boolean mismatch = false;
+        int mismatches = 0;
 
         for (Map.Entry<OriginLayer, Origin> entry : component.getOrigins().entrySet()) {
 
@@ -91,7 +85,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
             OriginLayer newLayer = OriginLayerManager.getNullable(oldLayer.getId());
 
             Origin oldOrigin = entry.getValue();
-            Origin newOrigin = OriginRegistry.getNullable(oldOrigin.getId());
+            Origin newOrigin = OriginManager.getNullable(oldOrigin.getId());
 
             if (oldOrigin != Origin.EMPTY) {
 
@@ -114,8 +108,8 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
                         continue;
                     }
 
-                    Origins.LOGGER.warn("Mismatched data fields of origin \"{}\" from player {}! Updating...", oldOrigin.getId(), player.getName().getString());
-                    mismatch = true;
+                    Origins.LOGGER.warn("Origin \"{}\" from player {} has mismatched data fields! Updating...", oldOrigin.getId(), player.getName().getString());
+                    mismatches++;
 
                     component.setOrigin(newLayer, newOrigin);
 
@@ -125,38 +119,33 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
         }
 
-        if (mismatch) {
-            Origins.LOGGER.info("Finished updating origin data of player {}!", player.getName().getString());
-        }
-
-        OriginComponent.sync(player);
-        if (component.hasAllOrigins()) {
-            return;
-        }
-
-        if (component.checkAutoChoosingLayers(player, true)) {
-            component.sync();
-        }
-
-        if (!init) {
-            return;
+        if (mismatches > 0) {
+            Origins.LOGGER.info("Finished updating {} origins with mismatched data fields from player {}!", mismatches, player.getName().getString());
         }
 
         if (component.hasAllOrigins()) {
-            OriginComponent.onChosen(player, false);
-        }
-
-        else if (!CarpetIntegration.isPlayerFake(player)) {
-
-            component.selectingOrigin(true);
             component.sync();
-
-            ServerPlayNetworking.send(player, new OpenChooseOriginScreenS2CPacket(true));
-
         }
 
         else {
+
+            component.checkAutoChoosingLayers(player, true);
+
+            if (init) {
+
+                if (component.hasAllOrigins()) {
+                    OriginComponent.onChosen(player, false);
+                }
+
+                else if (!CarpetIntegration.isPlayerFake(player)) {
+                    component.selectingOrigin(true);
+                    ServerPlayNetworking.send(player, new OpenChooseOriginScreenS2CPacket(true));
+                }
+
+            }
+
             component.sync();
+
         }
 
     }
@@ -166,13 +155,16 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
         Origins.LOGGER.info("Reading origin layers from data packs...");
 
-        LOADING_PRIORITIES.clear();
-        clear();
-
         DynamicRegistryManager dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
+        startBuilding();
+
         if (dynamicRegistries == null) {
+
             Origins.LOGGER.error("Can't read origin layers from data packs without access to dynamic registries!");
+            endBuilding();
+
             return;
+
         }
 
         Map<Identifier, List<PrioritizedEntry<OriginLayer>>> loadedLayers = new HashMap<>();
@@ -211,7 +203,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
                         .stream()
                         .map(OriginLayer.ConditionedOrigin::origins)
                         .flatMap(Collection::stream)
-                        .filter(Predicate.not(OriginRegistry::contains))
+                        .filter(Predicate.not(OriginManager::contains))
                         .map(Identifier::toString)
                         .toList();
 
@@ -232,7 +224,10 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
         });
 
-        Origins.LOGGER.info("Finished reading {} origin layer(s). Merging similar origin layers...", loadedLayers.size());
+        SerializableData.CURRENT_NAMESPACE = null;
+        SerializableData.CURRENT_PATH = null;
+
+        Origins.LOGGER.info("Finished reading {} origin layers. Merging similar origin layers...", loadedLayers.size());
         loadedLayers.forEach((id, entries) -> {
 
             AtomicReference<OriginLayer> currentLayer = new AtomicReference<>();
@@ -250,67 +245,37 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
             }
 
-            register(id, currentLayer.get());
+            LAYERS_BY_ID.put(id, currentLayer.get());
 
         });
 
+        endBuilding();
         Origins.LOGGER.info("Finished merging similar origin layers. Registry contains {} origin layers.", size());
+
         OriginDataLoadedCallback.EVENT.invoker().onDataLoaded(false);
 
-        SerializableData.CURRENT_NAMESPACE = null;
-        SerializableData.CURRENT_PATH = null;
+    }
 
-        LOADING_PRIORITIES.clear();
+    @Override
+    public Identifier getFabricId() {
+        return ID;
+    }
 
+    @Override
+    public Collection<Identifier> getFabricDependencies() {
+        return DEPENDENCIES;
     }
 
     private static OriginLayer merge(OriginLayer oldLayer, OriginLayer newLayer) {
 
-        Set<OriginLayer.ConditionedOrigin> origins = new ObjectLinkedOpenHashSet<>(oldLayer.getConditionedOrigins());
-        Set<Identifier> originsExcludedFromRandom = new ObjectLinkedOpenHashSet<>(oldLayer.getOriginsExcludedFromRandom());
-
-        Text name = oldLayer.getName();
-        OriginLayer.GuiTitle guiTitle = oldLayer.getGuiTitle();
-
-        Text missingName = oldLayer.getMissingName();
-        Text missingDescription = oldLayer.getMissingDescription();
-
-        Identifier defaultOrigin = oldLayer.getDefaultOrigin();
-
-        boolean randomAllowed = oldLayer.isRandomAllowed();
-        boolean unchoosableRandomAllowed = oldLayer.isUnchoosableRandomAllowed();
-
-        boolean autoChoose = oldLayer.shouldAutoChoose();
-        boolean enabled = oldLayer.isEnabled();
-        boolean hidden = oldLayer.isHidden();
-
-        int order = oldLayer.getOrder();
-
         if (newLayer.shouldReplace()) {
-
-            origins.clear();
-            originsExcludedFromRandom.clear();
-
-            name = newLayer.getName();
-            guiTitle = newLayer.getGuiTitle();
-
-            missingName = newLayer.getMissingName();
-            missingDescription = newLayer.getMissingDescription();
-
-            defaultOrigin = newLayer.getDefaultOrigin();
-
-            randomAllowed = newLayer.isRandomAllowed();
-            unchoosableRandomAllowed = newLayer.isUnchoosableRandomAllowed();
-
-            autoChoose = newLayer.shouldAutoChoose();
-            enabled = newLayer.isEnabled();
-            hidden = newLayer.isHidden();
-
-            order = newLayer.getOrder();
-
+            return newLayer;
         }
 
         else {
+
+            Set<OriginLayer.ConditionedOrigin> origins = new ObjectLinkedOpenHashSet<>(oldLayer.getConditionedOrigins());
+            Set<Identifier> originsExcludedFromRandom = new ObjectLinkedOpenHashSet<>(oldLayer.getOriginsExcludedFromRandom());
 
             if (newLayer.shouldReplaceOrigins()) {
                 origins.clear();
@@ -320,80 +285,62 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
                 originsExcludedFromRandom.clear();
             }
 
+            origins.addAll(newLayer.getConditionedOrigins());
+            originsExcludedFromRandom.addAll(newLayer.getOriginsExcludedFromRandom());
+
+            return new OriginLayer(
+                oldLayer.getId(),
+                oldLayer.getOrder(),
+                origins,
+                newLayer.shouldReplaceOrigins(),
+                newLayer.shouldReplace(),
+                oldLayer.isEnabled(),
+                oldLayer.getName(),
+                oldLayer.getGuiTitle(),
+                oldLayer.getMissingName(),
+                oldLayer.getMissingDescription(),
+                oldLayer.isRandomAllowed(),
+                oldLayer.isUnchoosableRandomAllowed(),
+                originsExcludedFromRandom,
+                newLayer.shouldReplaceExcludedOriginsFromRandom(),
+                oldLayer.getDefaultOrigin(),
+                oldLayer.shouldAutoChoose(),
+                oldLayer.isHidden()
+            );
+
         }
-
-        origins.addAll(newLayer.getConditionedOrigins());
-        originsExcludedFromRandom.addAll(newLayer.getOriginsExcludedFromRandom());
-
-        return new OriginLayer(
-            newLayer.getId(),
-            order,
-            origins,
-            newLayer.shouldReplaceOrigins(),
-            newLayer.shouldReplace(),
-            enabled,
-            name,
-            guiTitle,
-            missingName,
-            missingDescription,
-            randomAllowed,
-            unchoosableRandomAllowed,
-            originsExcludedFromRandom,
-            newLayer.shouldReplaceExcludedOriginsFromRandom(),
-            defaultOrigin,
-            autoChoose,
-            hidden
-        );
 
     }
 
     public static DataResult<OriginLayer> getResult(Identifier id) {
-        return LAYERS.containsKey(id)
-            ? DataResult.success(LAYERS.get(id))
+        return LAYERS_BY_ID.containsKey(id)
+            ? DataResult.success(LAYERS_BY_ID.get(id))
             : DataResult.error(() -> "Could not get layer from id '" + id.toString() + "', as it doesn't exist!");
     }
 
-    public static OriginLayer get(Identifier id) {
-
-        if (!LAYERS.containsKey(id)) {
-            throw new IllegalArgumentException("Could not get layer from id '" + id.toString() + "', as it doesn't exist!");
-        }
-
-        else return LAYERS.get(id);
-
+    public static Optional<OriginLayer> getOptional(Identifier id) {
+        return getResult(id).result();
     }
 
     @Nullable
     public static OriginLayer getNullable(Identifier id) {
-        return LAYERS.get(id);
+        return LAYERS_BY_ID.get(id);
     }
 
-    public static void register(Identifier id, OriginLayer layer) {
-
-        if (LAYERS.containsKey(id)) {
-            throw new IllegalArgumentException("Duplicate origin layer id tried to register: '" + id + "'");
-        }
-
-        else {
-            LAYERS.put(id, layer);
-        }
-
+    public static OriginLayer get(Identifier id) {
+        return getResult(id).getOrThrow();
     }
 
-    public static Collection<OriginLayer> getLayers() {
-        return LAYERS.values();
+    public static Set<Map.Entry<Identifier, OriginLayer>> entrySet() {
+        return new ObjectOpenHashSet<>(LAYERS_BY_ID.entrySet());
     }
 
-    public static int getOriginOptionCount(PlayerEntity playerEntity) {
-        return getOriginOptionCount(playerEntity, (layer, component) -> !component.hasOrigin(layer));
+    public static Set<Identifier> keySet() {
+        return new ObjectOpenHashSet<>(LAYERS_BY_ID.keySet());
     }
 
-    public static int getOriginOptionCount(PlayerEntity playerEntity, BiPredicate<OriginLayer, OriginComponent> condition) {
-        return LAYERS.values()
-            .stream()
-            .filter(ol -> ol.isEnabled() && ModComponents.ORIGIN.maybeGet(playerEntity).map(oc -> condition.test(ol, oc)).orElse(false))
-            .flatMapToInt(ol -> IntStream.of(ol.getOriginOptionCount(playerEntity)))
-            .sum();
+    public static Collection<OriginLayer> values() {
+        return new ObjectOpenHashSet<>(LAYERS_BY_ID.values());
     }
 
     public static boolean contains(OriginLayer layer) {
@@ -401,25 +348,52 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
     }
 
     public static boolean contains(Identifier id) {
-        return LAYERS.containsKey(id);
+        return LAYERS_BY_ID.containsKey(id);
+    }
+
+    public static int getOriginOptionCount(PlayerEntity playerEntity) {
+        return getOriginOptionCount(playerEntity, (layer, component) -> !component.hasOrigin(layer));
+    }
+
+    public static int getOriginOptionCount(PlayerEntity playerEntity, BiPredicate<OriginLayer, OriginComponent> condition) {
+        return values()
+            .stream()
+            .filter(ol -> ol.isEnabled() && ModComponents.ORIGIN.maybeGet(playerEntity).map(oc -> condition.test(ol, oc)).orElse(false))
+            .flatMapToInt(ol -> IntStream.of(ol.getOriginOptionCount(playerEntity)))
+            .sum();
     }
 
     public static int size() {
-        return LAYERS.size();
+        return LAYERS_BY_ID.size();
     }
 
-    public static void clear() {
-        LAYERS.clear();
+    private static void startBuilding() {
+        LOADING_PRIORITIES.clear();
+        LAYERS_BY_ID.clear();
     }
 
-    @Override
-    public Identifier getFabricId() {
-        return Identifier.of(Origins.MODID, "origin_layers");
+    private static void endBuilding() {
+        LOADING_PRIORITIES.clear();
+        LAYERS_BY_ID.trim();
     }
 
-    @Override
-    public Collection<Identifier> getFabricDependencies() {
-        return Set.of(Origins.identifier("origins"));
+    public static void send(ServerPlayerEntity player) {
+
+        if (player.server.isDedicated()) {
+            ServerPlayNetworking.send(player, new SyncOriginLayersS2CPacket(LAYERS_BY_ID));
+        }
+
+    }
+
+    @Environment(EnvType.CLIENT)
+    public static void receive(SyncOriginLayersS2CPacket packet, ClientPlayNetworking.Context context) {
+
+        startBuilding();
+        LAYERS_BY_ID.putAll(packet.layersById());
+
+        endBuilding();
+        OriginDataLoadedCallback.EVENT.invoker().onDataLoaded(true);
+
     }
 
 }

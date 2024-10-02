@@ -7,10 +7,7 @@ import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.origins.Origins;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayerManager;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
 import io.github.apace100.origins.util.ChoseOriginCriterion;
 import net.minecraft.entity.player.PlayerEntity;
@@ -65,7 +62,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
     @Override
     public boolean hasAllOrigins() {
-        return OriginLayerManager.getLayers()
+        return OriginLayerManager.values()
             .stream()
             .allMatch(layer -> !layer.isEnabled()
                             || (layer.getOrigins().isEmpty() || layer.getOriginOptionCount(player) == 0)
@@ -190,7 +187,7 @@ public class PlayerOriginComponent implements OriginComponent {
             try {
 
                 OriginLayer defaultOriginLayer = OriginLayerManager.get(Origins.identifier("origin"));
-                origins.put(defaultOriginLayer, OriginRegistry.get(Identifier.of(compoundTag.getString("Origin"))));
+                origins.put(defaultOriginLayer, OriginManager.get(Identifier.of(compoundTag.getString("Origin"))));
 
             } catch (Exception ignored) {
                 Origins.LOGGER.warn("Player {} had old origin which could not be migrated: {}", player.getName().getString(), compoundTag.getString("Origin"));
@@ -207,7 +204,7 @@ public class PlayerOriginComponent implements OriginComponent {
                     Identifier originId = Identifier.of(originLayerNbt.getString("Origin"));
 
                     OriginLayer layer = OriginLayerManager.get(layerId);
-                    Origin origin = OriginRegistry.get(originId);
+                    Origin origin = OriginManager.get(originId);
 
                     origins.put(layer, origin);
 

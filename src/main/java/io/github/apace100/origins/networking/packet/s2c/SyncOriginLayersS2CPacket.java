@@ -11,12 +11,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public record SyncOriginLayerRegistryS2CPacket(Map<Identifier, OriginLayer> layersById) implements CustomPayload {
+public record SyncOriginLayersS2CPacket(Map<Identifier, OriginLayer> layersById) implements CustomPayload {
 
-    public static final Id<SyncOriginLayerRegistryS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_origin_layer_registry"));
-    public static final PacketCodec<RegistryByteBuf, SyncOriginLayerRegistryS2CPacket> PACKET_CODEC = PacketCodec.of(SyncOriginLayerRegistryS2CPacket::write, SyncOriginLayerRegistryS2CPacket::read);
+    public static final Id<SyncOriginLayersS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_origin_layer_registry"));
+    public static final PacketCodec<RegistryByteBuf, SyncOriginLayersS2CPacket> PACKET_CODEC = PacketCodec.of(SyncOriginLayersS2CPacket::write, SyncOriginLayersS2CPacket::read);
 
-    public static SyncOriginLayerRegistryS2CPacket read(RegistryByteBuf buf) {
+    public static SyncOriginLayersS2CPacket read(RegistryByteBuf buf) {
 
         Map<Identifier, OriginLayer> layersById = new HashMap<>();
         int count = buf.readVarInt();
@@ -35,7 +35,7 @@ public record SyncOriginLayerRegistryS2CPacket(Map<Identifier, OriginLayer> laye
 
         }
 
-        return new SyncOriginLayerRegistryS2CPacket(layersById);
+        return new SyncOriginLayersS2CPacket(layersById);
 
     }
 

@@ -3,10 +3,7 @@ package io.github.apace100.origins.screen;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.networking.packet.c2s.ChooseOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseRandomOriginC2SPacket;
-import io.github.apace100.origins.origin.Impact;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModItems;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -53,7 +50,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 		OriginLayer currentLayer = getCurrentLayer();
 		currentLayer.getOrigins(player).forEach(originId -> {
 
-			Origin origin = OriginRegistry.get(originId);
+			Origin origin = OriginManager.get(originId);
 			if (!origin.isChoosable()) {
 				return;
 			}
@@ -183,8 +180,8 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 		randoms.sort((ia, ib) -> {
 
-			Origin a = OriginRegistry.get(ia);
-			Origin b = OriginRegistry.get(ib);
+			Origin a = OriginManager.get(ia);
+			Origin b = OriginManager.get(ib);
 
 			int impactDelta = Integer.compare(a.getImpact().getImpactValue(), b.getImpact().getImpactValue());
 			return impactDelta != 0 ? impactDelta : Integer.compare(a.getOrder(), b.getOrder());
@@ -192,7 +189,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 		});
 
 		for(Identifier id : randoms) {
-			randomOriginText.append(OriginRegistry.get(id).getName());
+			randomOriginText.append(OriginManager.get(id).getName());
 			randomOriginText.append(Text.of("\n"));
 		}
 

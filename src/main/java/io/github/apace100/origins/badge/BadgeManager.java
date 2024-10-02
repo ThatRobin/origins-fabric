@@ -8,11 +8,15 @@ import io.github.apace100.apoli.power.MultiplePower;
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.apoli.power.type.*;
+import io.github.apace100.calio.data.DataException;
 import io.github.apace100.calio.registry.DataObjectRegistry;
 import io.github.apace100.calio.util.DynamicIdentifier;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.integration.AutoBadgeCallback;
-import io.github.apace100.origins.networking.packet.s2c.SyncBadgeRegistryS2CPacket;
+import io.github.apace100.origins.networking.packet.s2c.SyncBadgesS2CPacket;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.recipe.*;
@@ -29,9 +33,8 @@ public final class BadgeManager {
         .dataErrorHandler((id, packName, exception) -> Origins.LOGGER.error("Error trying to read badge \"" + id + "\" from data pack [" + packName + "]: " + exception))
         .defaultFactory(BadgeFactories.KEYBIND)
         .buildAndRegister();
-    public static final Identifier PHASE = Origins.identifier("phase/badge_manager");
 
-    private static final Map<Identifier, List<Badge>> BADGES = new HashMap<>();
+    private static final Map<Identifier, List<Badge>> BADGES_BY_ID = new HashMap<>();
 
     private static final Identifier TOGGLE_BADGE_SPRITE = Origins.identifier("textures/gui/badge/toggle.png");
     private static final Identifier ACTIVE_BADGE_SPRITE = Origins.identifier("textures/gui/badge/active.png");
@@ -47,13 +50,13 @@ public final class BadgeManager {
         register(BadgeFactories.CRAFTING_RECIPE);
         register(BadgeFactories.KEYBIND);
         //register callbacks
-        PrePowerReloadCallback.EVENT.register(BadgeManager::clear);
+        PrePowerReloadCallback.EVENT.register(BADGES_BY_ID::clear);
         PowerManager.registerAdditionalData("badges", BadgeManager::readCustomBadges);
-        PowerOverrideCallback.EVENT.register(BADGES::remove);
+        PowerOverrideCallback.EVENT.register(BADGES_BY_ID::remove);
         PostPowerLoadCallback.EVENT.register(BadgeManager::readAutoBadges);
         AutoBadgeCallback.EVENT.register(BadgeManager::createAutoBadges);
-        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerManager.PHASE, PHASE);
-        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(PHASE, (player, joined) -> sync(player));
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerManager.ID, REGISTRY.getRegistryId());
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(REGISTRY.getRegistryId(), (player, joined) -> send(player));
     }
 
     public static void sync(ServerPlayerEntity player) {
@@ -64,35 +67,19 @@ public final class BadgeManager {
         REGISTRY.registerFactory(factory.id(), factory);
     }
 
-    public static void putPowerBadge(Identifier powerId, Badge badge) {
-        BADGES
-            .computeIfAbsent(powerId, id -> new LinkedList<>())
-            .add(badge);
-    }
-
-    public static void putPowerBadges(Identifier powerId, Collection<Badge> badges) {
-        BADGES
-            .computeIfAbsent(powerId, id -> new LinkedList<>())
-            .addAll(badges);
-    }
-
     public static List<Badge> getPowerBadges(Identifier powerId) {
-        return BADGES.getOrDefault(powerId, List.of());
+        return BADGES_BY_ID.getOrDefault(powerId, List.of());
     }
 
     public static boolean hasPowerBadges(Identifier powerId) {
-        return BADGES.containsKey(powerId);
+        return BADGES_BY_ID.containsKey(powerId);
     }
 
     public static boolean hasPowerBadges(Power power) {
         return hasPowerBadges(power.getId());
     }
 
-    public static void clear() {
-        BADGES.clear();
-    }
-
-    public static void readCustomBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonElement data, Power power) {
+    private static void readCustomBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonElement data, Power power) {
 
         if (power.isHidden() || isSubPower) {
             return;
@@ -101,38 +88,55 @@ public final class BadgeManager {
         try {
 
             if (!(data instanceof JsonArray dataArray)) {
-                throw new JsonSyntaxException("\"badges\" should be a JSON array!");
+                throw new JsonSyntaxException("Not a JSON array: " + data);
             }
 
-            List<Badge> badges = BADGES.computeIfAbsent(powerId, id -> new LinkedList<>());
-            for (JsonElement badgeJson : dataArray) {
+            List<Badge> badges = BADGES_BY_ID.computeIfAbsent(powerId, id -> new LinkedList<>());
+            for (int i = 0; i < dataArray.size(); i++) {
 
-                Badge badge;
-                if (badgeJson instanceof JsonObject badgeObject) {
-                    badge = REGISTRY.readDataObject(badgeObject);
-                }
+                JsonElement badgeJson = dataArray.get(i);
+                Badge badge = switch (badgeJson) {
+                    case JsonObject jsonObject -> {
 
-                else if (badgeJson instanceof JsonPrimitive badgePrimitive) {
+                        try {
+                            yield REGISTRY.readDataObject(jsonObject);
+                        }
 
-                    Identifier badgeId = DynamicIdentifier.of(badgePrimitive);
-                    badge = REGISTRY.get(badgeId);
+                        catch (DataException de) {
+                            throw de.prependArray(i);
+                        }
 
-                    if (badge == null) {
-                        throw new IllegalArgumentException("Badge \"" + badgeId + "\" is undefined");
+                        catch (Exception e) {
+                            throw new DataException(DataException.Phase.READING, i, e);
+                        }
+
                     }
+                    case JsonPrimitive jsonPrimitive -> {
 
-                }
+                        Identifier badgeId = DynamicIdentifier.of(jsonPrimitive);
+                        Badge referencedBadge = REGISTRY.get(badgeId);
 
-                else {
-                    throw new JsonSyntaxException("Nested JSON arrays are not allowed!");
-                }
+                        if (referencedBadge != null) {
+                            yield referencedBadge;
+                        }
+
+                        else {
+                            throw new DataException(DataException.Phase.READING, i, "Badge \"" + badgeId + "\" is undefined!");
+                        }
+
+                    }
+                    default ->
+                        throw new JsonSyntaxException("Not a JSON object or string: " + badgeJson);
+                };
 
                 badges.add(badge);
 
             }
 
-        } catch (Exception e) {
-            Origins.LOGGER.error("There was a problem parsing badges of power \"{}\": {}", powerId, e.getMessage());
+        }
+
+        catch (Exception e) {
+            Origins.LOGGER.error("There was a problem reading badges of power \"{}\": {}", powerId, (e.getMessage() != null ? e.getMessage() : e));
         }
 
     }
@@ -147,17 +151,17 @@ public final class BadgeManager {
      *      <li>The power is not manually hidden.</li>
      *  </ol>
      */
-    public static void readAutoBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonObject json, Power power) {
+    private static void readAutoBadges(Identifier powerId, Identifier factoryId, boolean isSubPower, JsonObject json, Power power) {
 
         if (!hasPowerBadges(powerId) && !(power instanceof MultiplePower) && (isSubPower || !power.isHidden())) {
             AutoBadgeCallback.EVENT
                 .invoker()
-                .createAutoBadge(powerId, power, BADGES.computeIfAbsent(powerId, id -> new LinkedList<>()));
+                .createAutoBadge(powerId, power, BADGES_BY_ID.computeIfAbsent(powerId, id -> new LinkedList<>()));
         }
 
     }
 
-    public static void createAutoBadges(Identifier powerId, Power power, List<Badge> badgeList) {
+    private static void createAutoBadges(Identifier powerId, Power power, List<Badge> badgeList) {
 
         switch (power.create(null)) {
             case Active active -> {

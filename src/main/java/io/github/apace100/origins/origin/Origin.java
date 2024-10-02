@@ -19,7 +19,6 @@ import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -30,7 +29,7 @@ import java.util.*;
 
 public class Origin implements Validatable {
 
-    public static final Origin EMPTY = OriginRegistry.register(Origin.special(Origins.identifier("empty"), ItemStack.EMPTY, Impact.NONE, Integer.MAX_VALUE));
+    public static final Origin EMPTY = Origin.special(Origins.identifier("empty"), ItemStack.EMPTY, Impact.NONE, Integer.MAX_VALUE);
     public static final SerializableDataType<Origin> DATA_TYPE = SerializableDataType.compound(
         new SerializableData()
             .add("id", SerializableDataTypes.IDENTIFIER)
@@ -187,15 +186,6 @@ public class Origin implements Validatable {
             .map(MultiplePower::getSubPowerIds)
             .flatMap(Collection::stream)
             .anyMatch(targetPower.getId()::equals);
-    }
-
-
-    public static Origin receive(RegistryByteBuf buf) {
-        return DATA_TYPE.receive(buf);
-    }
-
-    public void send(RegistryByteBuf buf) {
-        DATA_TYPE.send(buf, this);
     }
 
     @Override

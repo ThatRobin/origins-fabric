@@ -7,10 +7,7 @@ import io.github.apace100.origins.networking.packet.c2s.ChooseOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.c2s.ChooseRandomOriginC2SPacket;
 import io.github.apace100.origins.networking.packet.s2c.ConfirmOriginS2CPacket;
 import io.github.apace100.origins.networking.task.VersionHandshakeTask;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayerManager;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
@@ -49,7 +46,7 @@ public class ModPacketsC2S {
             return;
         }
 
-        Origin origin = OriginRegistry.get(packet.originId());
+        Origin origin = OriginManager.get(packet.originId());
         if (!(origin.isChoosable() || layer.contains(origin, player))) {
             Origins.LOGGER.warn("Player {} tried to choose unchoosable origin \"{}\" from layer \"{}\"!", player.getName().getString(), packet.originId(), packet.layerId());
             component.setOrigin(layer, Origin.EMPTY);
@@ -97,7 +94,7 @@ public class ModPacketsC2S {
         } else {
 
             Identifier randomOriginId = randomOriginIds.get(player.getRandom().nextInt(randomOriginIds.size()));
-            Origin origin = OriginRegistry.get(randomOriginId);
+            Origin origin = OriginManager.get(randomOriginId);
 
             boolean hadOriginBefore = component.hadOriginBefore();
             boolean hadAllOrigins = component.hasAllOrigins();

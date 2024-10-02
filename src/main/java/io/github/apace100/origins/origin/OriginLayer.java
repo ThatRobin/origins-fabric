@@ -235,7 +235,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .stream()
             .filter(co -> playerEntity == null || co.isConditionFulfilled(playerEntity))
             .flatMap(co -> co.origins.stream())
-            .filter(OriginRegistry::contains)
+            .filter(OriginManager::contains)
             .collect(Collectors.toList());
     }
 
@@ -243,7 +243,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
         int choosableOrigins = (int) getOrigins(playerEntity)
             .stream()
-            .map(OriginRegistry::get)
+            .map(OriginManager::get)
             .filter(Origin::isChoosable)
             .count();
 
@@ -295,9 +295,9 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .stream()
             .filter(co -> co.isConditionFulfilled(playerEntity))
             .flatMap(co -> co.origins.stream())
-            .filter(OriginRegistry::contains)
+            .filter(OriginManager::contains)
             .filter(oId -> !originsExcludedFromRandom.contains(oId))
-            .filter(oid -> unchoosableRandomAllowed || OriginRegistry.get(oid).isChoosable())
+            .filter(oid -> unchoosableRandomAllowed || OriginManager.get(oid).isChoosable())
             .collect(Collectors.toList());
     }
 

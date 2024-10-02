@@ -3,7 +3,7 @@ package io.github.apace100.origins.mixin;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.OriginManager;
 import io.github.apace100.origins.registry.ModComponents;
 import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.advancement.AdvancementProgress;
@@ -37,7 +37,7 @@ public abstract class OriginUpgradeMixin {
         Origin.get(owner).forEach((originLayer, origin) -> origin.getUpgrade(advancement).ifPresent(originUpgrade -> {
             try {
 
-                Origin upgradeTo = OriginRegistry.get(originUpgrade.upgradeToOrigin());
+                Origin upgradeTo = OriginManager.get(originUpgrade.upgradeToOrigin());
                 OriginComponent component = ModComponents.ORIGIN.get(owner);
 
                 component.setOrigin(originLayer, upgradeTo);

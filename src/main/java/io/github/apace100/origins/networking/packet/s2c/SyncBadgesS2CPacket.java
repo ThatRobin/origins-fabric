@@ -12,12 +12,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public record SyncBadgeRegistryS2CPacket(Map<Identifier, List<Badge>> badgesById) implements CustomPayload {
+public record SyncBadgesS2CPacket(Map<Identifier, List<Badge>> badgesById) implements CustomPayload {
 
-    public static final Id<SyncBadgeRegistryS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_badge_registry"));
-    public static final PacketCodec<RegistryByteBuf, SyncBadgeRegistryS2CPacket> PACKET_CODEC = PacketCodec.of(SyncBadgeRegistryS2CPacket::write, SyncBadgeRegistryS2CPacket::read);
+    public static final Id<SyncBadgesS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_badge_registry"));
+    public static final PacketCodec<RegistryByteBuf, SyncBadgesS2CPacket> PACKET_CODEC = PacketCodec.of(SyncBadgesS2CPacket::write, SyncBadgesS2CPacket::read);
 
-    public static SyncBadgeRegistryS2CPacket read(RegistryByteBuf buf) {
+    public static SyncBadgesS2CPacket read(RegistryByteBuf buf) {
 
         Map<Identifier, List<Badge>> badgesById = new HashMap<>();
         int entriesCount = buf.readVarInt();
@@ -35,7 +35,7 @@ public record SyncBadgeRegistryS2CPacket(Map<Identifier, List<Badge>> badgesById
 
         }
 
-        return new SyncBadgeRegistryS2CPacket(badgesById);
+        return new SyncBadgesS2CPacket(badgesById);
 
     }
 

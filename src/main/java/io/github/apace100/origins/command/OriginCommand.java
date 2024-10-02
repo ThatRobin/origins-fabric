@@ -8,10 +8,7 @@ import io.github.apace100.origins.command.argument.LayerArgumentType;
 import io.github.apace100.origins.command.argument.OriginArgumentType;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayerManager;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -105,7 +102,7 @@ public class OriginCommand {
 				
 			}
 			
-			if (processedTargets == 1) serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.set.success.single", targets.iterator().next().getDisplayName().getString(), originLayer.getName(), origin.getName()), true);
+			if (processedTargets == 1) serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.set.success.single", targets.iterator().next().getName().getString(), originLayer.getName(), origin.getName()), true);
 			else {
 				int finalProcessedTargets = processedTargets;
 				serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.set.success.multiple", finalProcessedTargets, originLayer.getName(), origin.getName()), true);
@@ -171,7 +168,7 @@ public class OriginCommand {
 		OriginLayer originLayer = LayerArgumentType.getLayer(commandContext, "layer");
 		Origin origin = originComponent.getOrigin(originLayer);
 		
-		serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.get.result", target.getDisplayName().getString(), originLayer.getName(), origin.getName(), origin.getId()), true);
+		serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.get.result", target.getName().getString(), originLayer.getName(), origin.getName(), origin.getId()), true);
 		
 		return 1;
 		
@@ -245,7 +242,7 @@ public class OriginCommand {
 			if (targets.size() > 1) serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.random.success.multiple", targets.size(), originLayer.getName()), true);
 			else if (targets.size() == 1) {
 				Origin finalOrigin = origin;
-				serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.random.success.single", targets.iterator().next().getDisplayName().getString(), finalOrigin.getName(), originLayer.getName()), false);
+				serverCommandSource.sendFeedback(() -> Text.translatable("commands.origin.random.success.single", targets.iterator().next().getName().getString(), finalOrigin.getName(), originLayer.getName()), false);
 			}
 
 			return targets.size();
@@ -269,7 +266,10 @@ public class OriginCommand {
 
 		ServerCommandSource serverCommandSource = commandContext.getSource();
 		List<ServerPlayerEntity> targets = new ArrayList<>();
-		List<OriginLayer> originLayers = OriginLayerManager.getLayers().stream().filter(OriginLayer::isRandomAllowed).toList();
+		List<OriginLayer> originLayers = OriginLayerManager.values()
+			.stream()
+			.filter(OriginLayer::isRandomAllowed)
+			.toList();
 
 		switch (targetType) {
 			case INVOKER -> targets.add(serverCommandSource.getPlayerOrThrow());
@@ -299,7 +299,7 @@ public class OriginCommand {
 		if (layer != null) {
 			layersToProcess.add(layer);
 		} else {
-			layersToProcess.addAll(OriginLayerManager.getLayers());
+			layersToProcess.addAll(OriginLayerManager.values());
 		}
 
 		layersToProcess
@@ -321,7 +321,7 @@ public class OriginCommand {
 
 	private static Origin getRandomOrigin(ServerPlayerEntity target, OriginLayer originLayer) {
 
-		List<Origin> origins = originLayer.getRandomOrigins(target).stream().map(OriginRegistry::get).toList();
+		List<Origin> origins = originLayer.getRandomOrigins(target).stream().map(OriginManager::get).toList();
 		OriginComponent originComponent = ModComponents.ORIGIN.get(target);
 		Origin origin = origins.get(new Random().nextInt(origins.size()));
 
@@ -336,7 +336,7 @@ public class OriginCommand {
 
 		Origins.LOGGER.info(
 			"Player {} was randomly assigned the origin {} for layer {}",
-			target.getDisplayName().getString(),
+			target.getName().getString(),
 			origin.getId().toString(),
 			originLayer.getId().toString()
 		);
