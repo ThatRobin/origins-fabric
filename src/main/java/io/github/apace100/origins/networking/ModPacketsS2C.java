@@ -1,9 +1,11 @@
 package io.github.apace100.origins.networking;
 
 import io.github.apace100.origins.Origins;
+import io.github.apace100.origins.OriginsClient;
 import io.github.apace100.origins.badge.BadgeManager;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
+import io.github.apace100.origins.networking.packet.OriginsInstalledS2CPacket;
 import io.github.apace100.origins.networking.packet.s2c.*;
 import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
@@ -12,10 +14,12 @@ import io.github.apace100.origins.screen.WaitForNextLayerScreen;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientConfigurationNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
 
 import java.util.Collections;
@@ -27,7 +31,10 @@ public class ModPacketsS2C {
     @Environment(EnvType.CLIENT)
     public static void register() {
 
-        ClientConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.PACKET_ID, ModPacketsS2C::handleHandshake);
+        ClientConfigurationConnectionEvents.START.register(ModPacketsS2C::resetOriginsInstallationStatus);
+
+        ClientConfigurationNetworking.registerGlobalReceiver(VersionHandshakePacket.PACKET_ID, ModPacketsS2C::sendHandshakeReply);
+        ClientConfigurationNetworking.registerGlobalReceiver(OriginsInstalledS2CPacket.PACKET_ID, ModPacketsS2C::receiveOriginsInstallationStatus);
 
         ClientPlayConnectionEvents.INIT.register(((clientPlayNetworkHandler, minecraftClient) -> {
             ClientPlayNetworking.registerReceiver(ConfirmOriginS2CPacket.PACKET_ID, ModPacketsS2C::receiveOriginConfirmation);
@@ -57,11 +64,6 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void handleHandshake(VersionHandshakePacket packet, ClientConfigurationNetworking.Context context) {
-        context.responseSender().sendPacket(new VersionHandshakePacket(Origins.SEMVER));
-    }
-
-    @Environment(EnvType.CLIENT)
     private static void openOriginScreen(OpenChooseOriginScreenS2CPacket packet, ClientPlayNetworking.Context context) {
 
         List<OriginLayer> layers = new ObjectArrayList<>();
@@ -76,6 +78,21 @@ public class ModPacketsS2C {
         Collections.sort(layers);
         MinecraftClient.getInstance().setScreen(new ChooseOriginScreen(layers, 0, packet.showBackground()));
 
+    }
+
+    @Environment(EnvType.CLIENT)
+    private static void sendHandshakeReply(VersionHandshakePacket packet, ClientConfigurationNetworking.Context context) {
+        context.responseSender().sendPacket(new VersionHandshakePacket(Origins.SEMVER));
+    }
+
+    @Environment(EnvType.CLIENT)
+    private static void receiveOriginsInstallationStatus(OriginsInstalledS2CPacket packet, ClientConfigurationNetworking.Context context) {
+        context.client().submit(() -> OriginsClient.isServerRunningOrigins = true);
+    }
+
+    @Environment(EnvType.CLIENT)
+    private static void resetOriginsInstallationStatus(ClientConfigurationNetworkHandler handler, MinecraftClient client) {
+        client.submit(() -> OriginsClient.isServerRunningOrigins = false);
     }
 
 }

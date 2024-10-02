@@ -12,7 +12,6 @@ import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.Origins;
-import io.github.apace100.origins.OriginsClient;
 import io.github.apace100.origins.networking.packet.s2c.SyncOriginsS2CPacket;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
@@ -34,7 +33,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 
 public class OriginManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
 
@@ -264,7 +262,6 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 	@Environment(EnvType.CLIENT)
 	public static void receive(SyncOriginsS2CPacket packet, ClientPlayNetworking.Context context) {
 
-		OriginsClient.isServerRunningOrigins = true;
 		startBuilding();
 
 		packet.originsById().entrySet()

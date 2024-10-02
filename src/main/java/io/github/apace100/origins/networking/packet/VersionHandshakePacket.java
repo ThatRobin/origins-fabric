@@ -7,16 +7,10 @@ import net.minecraft.network.packet.CustomPayload;
 
 public record VersionHandshakePacket(int[] semver) implements CustomPayload {
 
+    private static final PacketCodec<PacketByteBuf, int[]> INT_ARRAY = PacketCodec.ofStatic(PacketByteBuf::writeIntArray, PacketByteBuf::readIntArray);
+
     public static final Id<VersionHandshakePacket> PACKET_ID = new Id<>(Origins.identifier("handshake/version"));
-    public static final PacketCodec<PacketByteBuf, VersionHandshakePacket> PACKET_CODEC = PacketCodec.of(VersionHandshakePacket::write, VersionHandshakePacket::read);
-
-    public static VersionHandshakePacket read(PacketByteBuf buffer) {
-        return new VersionHandshakePacket(buffer.readIntArray());
-    }
-
-    public void write(PacketByteBuf buffer) {
-        buffer.writeIntArray(semver);
-    }
+    public static final PacketCodec<PacketByteBuf, VersionHandshakePacket> PACKET_CODEC = INT_ARRAY.xmap(VersionHandshakePacket::new, VersionHandshakePacket::semver);
 
     @Override
     public Id<? extends CustomPayload> getId() {
