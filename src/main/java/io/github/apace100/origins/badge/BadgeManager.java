@@ -59,8 +59,18 @@ public final class BadgeManager {
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(REGISTRY.getRegistryId(), (player, joined) -> send(player));
     }
 
-    public static void sync(ServerPlayerEntity player) {
-        ServerPlayNetworking.send(player, new SyncBadgeRegistryS2CPacket(BADGES));
+    public static void send(ServerPlayerEntity player) {
+
+        if (player.server.isDedicated()) {
+            ServerPlayNetworking.send(player, new SyncBadgesS2CPacket(BADGES_BY_ID));
+        }
+
+    }
+
+    @Environment(EnvType.CLIENT)
+    public static void receive(SyncBadgesS2CPacket packet, ClientPlayNetworking.Context context) {
+        BADGES_BY_ID.clear();
+        BADGES_BY_ID.putAll(packet.badgesById());
     }
 
     public static void register(BadgeFactory factory) {
