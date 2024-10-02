@@ -7,10 +7,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.networking.packet.s2c.OpenChooseOriginScreenS2CPacket;
-import io.github.apace100.origins.origin.Origin;
-import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginLayerManager;
-import io.github.apace100.origins.origin.OriginRegistry;
+import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -56,32 +53,32 @@ public class ItemOriginsComponent implements TooltipAppender {
         String baseKey = "component.item.origins.origin";
         boolean appendedTooltips = false;
 
-        for (Entry entry : entries) {
+		for (Entry entry : entries) {
 
-            if (!entry.canSelect()) {
-                continue;
-            }
+			if (!entry.canSelect()) {
+				continue;
+			}
 
-            OriginLayer layer = OriginLayerManager.get(entry.layerId());
-            Origin origin = OriginRegistry.get(entry.originId());
+			OriginLayer layer = OriginLayerManager.get(entry.layerId());
+			Origin origin = OriginManager.get(entry.originId());
 
-            String translationKey;
-            Object[] args;
+			String translationKey;
+			Object[] args;
 
-            if (origin == Origin.EMPTY) {
-                translationKey = baseKey + ".layer";
-                args = new Object[] { layer.getName() };
-            }
+			if (origin == Origin.EMPTY) {
+				translationKey = baseKey + ".layer";
+				args = new Object[]{layer.getName()};
+			}
 
             else {
-                translationKey = baseKey + ".layer_and_origin";
-                args = new Object[] { layer.getName(), origin.getName() };
-            }
+				translationKey = baseKey + ".layer_and_origin";
+				args = new Object[]{layer.getName(), origin.getName()};
+			}
 
-            tooltip.accept(Text.translatable(translationKey, args).formatted(Formatting.GRAY));
-            appendedTooltips = true;
+			tooltip.accept(Text.translatable(translationKey, args).formatted(Formatting.GRAY));
+			appendedTooltips = true;
 
-        }
+		}
 
         if (!appendedTooltips) {
             tooltip.accept(Text.translatable(baseKey + ".generic").formatted(Formatting.GRAY));
@@ -104,17 +101,17 @@ public class ItemOriginsComponent implements TooltipAppender {
 
         for (Entry entry : entries) {
 
-            if (!entry.canSelect()) {
+            if (entry.canSelect()) {
                 continue;
             }
 
-            originComponent.setOrigin(OriginLayerManager.get(entry.layerId()), OriginRegistry.get(entry.originId()));
+            originComponent.setOrigin(OriginLayerManager.get(entry.layerId()), OriginManager.get(entry.originId()));
             assignedOrigin = true;
 
         }
 
         if (!assignedOrigin) {
-            OriginLayerManager.getLayers()
+            OriginLayerManager.values()
                 .stream()
                 .filter(OriginLayer::isEnabled)
                 .forEach(layer -> originComponent.setOrigin(layer, Origin.EMPTY));
@@ -135,8 +132,8 @@ public class ItemOriginsComponent implements TooltipAppender {
     public record Entry(Identifier layerId, Identifier originId) {
 
         public static final MapCodec<Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            OriginLayerManager.VALIDATING_CODEC.fieldOf("layer").forGetter(Entry::layerId),
-            OriginRegistry.VALIDATING_CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
+            Identifier.CODEC.fieldOf("layer").forGetter(Entry::layerId),
+            Identifier.CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
 
         public static final PacketCodec<PacketByteBuf, Entry> PACKET_CODEC = PacketCodec.tuple(
@@ -153,7 +150,7 @@ public class ItemOriginsComponent implements TooltipAppender {
         public boolean canSelect() {
 
             OriginLayer layer = OriginLayerManager.getNullable(layerId);
-            Origin origin = OriginRegistry.getNullable(originId);
+            Origin origin = OriginManager.getNullable(originId);
 
             return layer != null
                 && origin != null
